@@ -3,12 +3,12 @@
 
 // Структура для представления небесного тела
 struct CelestialBody {
-    double x, y;    // Положение
-    double vx, vy;  // Скорость
-    double mass;    // Масса
+    float x, y;    // Положение
+    float vx, vy;  // Скорость
+    float mass;    // Масса
 
     // Ускорение (вычисляется на каждом шаге)
-    double ax = 0.0, ay = 0.0;
+    float ax = 0.0f, ay = 0.0f;
 };
 
 #endif // SIMULATION_H

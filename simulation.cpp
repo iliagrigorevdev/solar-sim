@@ -9,24 +9,24 @@
 // --- Константы для симуляции ---
 
 // Гравитационная постоянная (масштабирована для лучшей визуализации)
-const double G = 500.0;
+const float G = 500.0f;
 
 // Количество небесных тел
 const int NUM_BODIES = 100;
 
 // Радиус круга для начальной генерации объектов
-const double INITIALIZATION_RADIUS = 200.0;
+const float INITIALIZATION_RADIUS = 200.0f;
 
 // Шаг по времени для каждого обновления симуляции
-const double DT = 0.01;
+const float DT = 0.05f;
 
 // Смягчающий фактор для предотвращения бесконечных сил на малых расстояниях
-const double SOFTENING_FACTOR = 10.0;
+const float SOFTENING_FACTOR = 10.0f;
 
 // Максимальные значения для случайной генерации
-const double MAX_MASS = 50.0;
-const double MIN_MASS = 5.0;
-const double MAX_INITIAL_VELOCITY = 10.0;
+const float MAX_MASS = 50.0f;
+const float MIN_MASS = 5.0f;
+const float MAX_INITIAL_VELOCITY = 10.0f;
 
 
 // Функция для инициализации небесных тел
@@ -34,19 +34,19 @@ void initialize_bodies(std::vector<CelestialBody>& bodies) {
     // Настройка генератора случайных чисел
     unsigned seed = std::chrono::system_clock::now().time_since_epoch().count();
     std::mt19937 generator(seed);
-    std::uniform_real_distribution<double> dist_radius(0.0, INITIALIZATION_RADIUS);
-    std::uniform_real_distribution<double> dist_angle(0.0, 2.0 * M_PI);
-    std::uniform_real_distribution<double> dist_vel(-MAX_INITIAL_VELOCITY, MAX_INITIAL_VELOCITY);
-    std::uniform_real_distribution<double> dist_mass(MIN_MASS, MAX_MASS);
+    std::uniform_real_distribution<float> dist_radius(0.0f, INITIALIZATION_RADIUS);
+    std::uniform_real_distribution<float> dist_angle(0.0f, 2.0f * M_PI);
+    std::uniform_real_distribution<float> dist_vel(-MAX_INITIAL_VELOCITY, MAX_INITIAL_VELOCITY);
+    std::uniform_real_distribution<float> dist_mass(MIN_MASS, MAX_MASS);
 
     for (int i = 0; i < NUM_BODIES; ++i) {
         // Генерируем случайные полярные координаты и преобразуем их в декартовы
         // Использование sqrt() обеспечивает равномерное распределение по площади круга
-        double r = std::sqrt(dist_radius(generator)) * INITIALIZATION_RADIUS;
-        double angle = dist_angle(generator);
+        float r = std::sqrt(dist_radius(generator)) * INITIALIZATION_RADIUS;
+        float angle = dist_angle(generator);
 
-        double x = r * cos(angle);
-        double y = r * sin(angle);
+        float x = r * cos(angle);
+        float y = r * sin(angle);
 
         CelestialBody new_body;
         new_body.x = x;
@@ -62,8 +62,8 @@ void initialize_bodies(std::vector<CelestialBody>& bodies) {
 void update_simulation(std::vector<CelestialBody>& bodies) {
     // 1. Сброс ускорений
     for (auto& body : bodies) {
-        body.ax = 0.0;
-        body.ay = 0.0;
+        body.ax = 0.0f;
+        body.ay = 0.0f;
     }
 
     // 2. Вычисление сил и ускорений (O(N^2))
@@ -72,19 +72,19 @@ void update_simulation(std::vector<CelestialBody>& bodies) {
             if (i == j) continue;
 
             // Вектор расстояния от тела i до тела j
-            double dx = bodies[j].x - bodies[i].x;
-            double dy = bodies[j].y - bodies[i].y;
+            float dx = bodies[j].x - bodies[i].x;
+            float dy = bodies[j].y - bodies[i].y;
 
             // Квадрат расстояния с фактором смягчения
-            double dist_sq = dx * dx + dy * dy + SOFTENING_FACTOR * SOFTENING_FACTOR;
-            double dist = std::sqrt(dist_sq);
+            float dist_sq = dx * dx + dy * dy + SOFTENING_FACTOR * SOFTENING_FACTOR;
+            float dist = std::sqrt(dist_sq);
 
             // Сила гравитации: F = G * m1 * m2 / r^2
-            double force_magnitude = (G * bodies[i].mass * bodies[j].mass) / dist_sq;
+            float force_magnitude = (G * bodies[i].mass * bodies[j].mass) / dist_sq;
 
             // Направление силы (единичный вектор)
-            double dir_x = dx / dist;
-            double dir_y = dy / dist;
+            float dir_x = dx / dist;
+            float dir_y = dy / dist;
 
             // Добавляем компоненты силы к ускорению тела i
             // a = F/m, поэтому a = G * m2 / r^2

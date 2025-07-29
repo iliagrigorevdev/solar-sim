@@ -22,7 +22,6 @@ std::string Renderer::read_file(const std::string& path) {
     return "";
 }
 
-
 bool Renderer::init() {
     if (SDL_Init(SDL_INIT_VIDEO) < 0) {
         std::cerr << "Could not initialize SDL: " << SDL_GetError() << std::endl;
@@ -56,11 +55,14 @@ bool Renderer::init() {
 
     pos_attrib_loc = glGetAttribLocation(shader_program, "a_position");
     resolution_uniform_loc = glGetUniformLocation(shader_program, "u_resolution");
-    bodies_uniform_loc = glGetUniformLocation(shader_program, "u_bodies");
-    num_bodies_uniform_loc = glGetUniformLocation(shader_program, "u_num_bodies");
+    body_pos_uniform_loc = glGetUniformLocation(shader_program, "u_body_pos");
+    body_radius_uniform_loc = glGetUniformLocation(shader_program, "u_body_radius");
 
     glViewport(0, 0, screen_width, screen_height);
     glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+    // Включаем блендинг для корректного наложения объектов
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE);
 
     return true;
 }
@@ -70,30 +72,18 @@ void Renderer::render(const std::vector<CelestialBody>& bodies) {
 
     glUniform2f(resolution_uniform_loc, screen_width, screen_height);
 
-    // Подготовка данных о телах для передачи в шейдер
-    std::vector<GLfloat> body_data;
-    body_data.reserve(bodies.size() * 3);
-    for (const auto& body : bodies) {
-        body_data.push_back(body.x);
-        body_data.push_back(body.y);
-        // Используем массу как радиус для визуализации
-        body_data.push_back(body.mass); 
-    }
-
-    glUniform1i(num_bodies_uniform_loc, bodies.size());
-    glUniform3fv(bodies_uniform_loc, bodies.size(), body_data.data());
-
-    // Вершины для полноэкранного прямоугольника
     GLfloat vertices[] = {
-        -1.0f, -1.0f,
-         1.0f, -1.0f,
-        -1.0f,  1.0f,
-         1.0f,  1.0f
+        -1.0f, -1.0f, 1.0f, -1.0f, -1.0f, 1.0f, 1.0f, 1.0f
     };
-
     glVertexAttribPointer(pos_attrib_loc, 2, GL_FLOAT, GL_FALSE, 0, vertices);
     glEnableVertexAttribArray(pos_attrib_loc);
-    glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+
+    // Рендерим каждое тело отдельно
+    for (const auto& body : bodies) {
+        glUniform2f(body_pos_uniform_loc, body.x, body.y);
+        glUniform1f(body_radius_uniform_loc, body.mass);
+        glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+    }
 
     SDL_GL_SwapWindow(window);
 }

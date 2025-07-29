@@ -25,8 +25,8 @@ private:
     GLuint shader_program;
     GLint pos_attrib_loc;
     GLint resolution_uniform_loc;
-    GLint bodies_uniform_loc;
-    GLint num_bodies_uniform_loc;
+    GLint body_pos_uniform_loc;
+    GLint body_radius_uniform_loc;
 
     GLuint load_shader(GLenum type, const char* source);
     GLuint create_shader_program(const char* vs_source, const char* fs_source);
