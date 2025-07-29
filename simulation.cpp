@@ -3,6 +3,9 @@
 #include <cmath>
 #include <random>
 #include <chrono>
+#ifdef __EMSCRIPTEN__
+#include <emscripten.h>
+#endif
 #include "renderer.h"
 #include "simulation.h"
 
@@ -28,6 +31,10 @@ const float MAX_MASS = 50.0f;
 const float MIN_MASS = 5.0f;
 const float MAX_INITIAL_VELOCITY = 10.0f;
 
+struct SimulationContext {
+    Renderer* renderer;
+    std::vector<CelestialBody>* bodies;
+};
 
 // Функция для инициализации небесных тел
 void initialize_bodies(std::vector<CelestialBody>& bodies) {
@@ -104,6 +111,16 @@ void update_simulation(std::vector<CelestialBody>& bodies) {
     }
 }
 
+#ifdef __EMSCRIPTEN__
+void main_loop(void* arg) {
+    SimulationContext* context = static_cast<SimulationContext*>(arg);
+    if (!context->renderer->handle_events()) {
+        emscripten_cancel_main_loop();
+    }
+    update_simulation(*context->bodies);
+    context->renderer->render(*context->bodies);
+}
+#endif
 
 int main(int argc, char* argv[]) {
     std::vector<CelestialBody> bodies;
@@ -114,12 +131,17 @@ int main(int argc, char* argv[]) {
         return -1;
     }
 
+    #ifdef __EMSCRIPTEN__
+    SimulationContext context = { &renderer, &bodies };
+    emscripten_set_main_loop_arg(main_loop, &context, 0, 1);
+#else
     bool running = true;
     while(running) {
         running = renderer.handle_events();
         update_simulation(bodies);
         renderer.render(bodies);
     }
+#endif
 
     return 0;
 }
