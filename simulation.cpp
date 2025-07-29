@@ -3,6 +3,8 @@
 #include <cmath>
 #include <random>
 #include <chrono>
+#include "renderer.h"
+#include "simulation.h"
 
 // --- Константы для симуляции ---
 
@@ -18,9 +20,6 @@ const double INITIALIZATION_RADIUS = 200.0;
 // Шаг по времени для каждого обновления симуляции
 const double DT = 0.01;
 
-// Количество шагов симуляции
-const int SIMULATION_STEPS = 2000;
-
 // Смягчающий фактор для предотвращения бесконечных сил на малых расстояниях
 const double SOFTENING_FACTOR = 10.0;
 
@@ -29,16 +28,6 @@ const double MAX_MASS = 50.0;
 const double MIN_MASS = 5.0;
 const double MAX_INITIAL_VELOCITY = 10.0;
 
-
-// Структура для представления небесного тела
-struct CelestialBody {
-    double x, y;    // Положение
-    double vx, vy;  // Скорость
-    double mass;    // Масса
-
-    // Ускорение (вычисляется на каждом шаге)
-    double ax = 0.0, ay = 0.0;
-};
 
 // Функция для инициализации небесных тел
 void initialize_bodies(std::vector<CelestialBody>& bodies) {
@@ -116,25 +105,20 @@ void update_simulation(std::vector<CelestialBody>& bodies) {
 }
 
 
-int main() {
+int main(int argc, char* argv[]) {
     std::vector<CelestialBody> bodies;
     initialize_bodies(bodies);
 
-    std::cout << "Симуляция запущена с " << NUM_BODIES << " телами.\n";
-    if (!bodies.empty()) {
-        std::cout << "Начальное положение первого тела: ("
-                  << bodies[0].x << ", " << bodies[0].y << ")\n";
+    Renderer renderer(800, 800);
+    if (!renderer.init()) {
+        return -1;
     }
 
-    // Основной цикл симуляции
-    for (int step = 0; step < SIMULATION_STEPS; ++step) {
+    bool running = true;
+    while(running) {
+        running = renderer.handle_events();
         update_simulation(bodies);
-    }
-
-    std::cout << "Симуляция завершена после " << SIMULATION_STEPS << " шагов.\n";
-    if (!bodies.empty()) {
-        std::cout << "Конечное положение первого тела: ("
-                  << bodies[0].x << ", " << bodies[0].y << ")\n";
+        renderer.render(bodies);
     }
 
     return 0;

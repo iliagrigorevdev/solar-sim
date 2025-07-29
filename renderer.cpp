@@ -1,0 +1,162 @@
+#include "renderer.h"
+#include <iostream>
+#include <fstream>
+#include <sstream>
+
+Renderer::Renderer(int width, int height) : screen_width(width), screen_height(height) {}
+
+Renderer::~Renderer() {
+    if (context) SDL_GL_DeleteContext(context);
+    if (window) SDL_DestroyWindow(window);
+    SDL_Quit();
+}
+
+std::string Renderer::read_file(const std::string& path) {
+    std::ifstream file(path);
+    std::stringstream buffer;
+    if (file) {
+        buffer << file.rdbuf();
+        return buffer.str();
+    }
+    std::cerr << "Error: Could not open file " << path << std::endl;
+    return "";
+}
+
+
+bool Renderer::init() {
+    if (SDL_Init(SDL_INIT_VIDEO) < 0) {
+        std::cerr << "Could not initialize SDL: " << SDL_GetError() << std::endl;
+        return false;
+    }
+
+    SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_ES);
+    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 2);
+    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 0);
+
+    window = SDL_CreateWindow("Solar System Simulation", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, screen_width, screen_height, SDL_WINDOW_OPENGL | SDL_WINDOW_SHOWN);
+    if (!window) {
+        std::cerr << "Could not create window: " << SDL_GetError() << std::endl;
+        return false;
+    }
+
+    context = SDL_GL_CreateContext(window);
+    if (!context) {
+        std::cerr << "Could not create OpenGL ES context: " << SDL_GetError() << std::endl;
+        return false;
+    }
+
+    std::string vs_source = read_file("shader.vert");
+    std::string fs_source = read_file("shader.frag");
+
+    shader_program = create_shader_program(vs_source.c_str(), fs_source.c_str());
+    if (!shader_program) {
+        return false;
+    }
+    glUseProgram(shader_program);
+
+    pos_attrib_loc = glGetAttribLocation(shader_program, "a_position");
+    resolution_uniform_loc = glGetUniformLocation(shader_program, "u_resolution");
+    bodies_uniform_loc = glGetUniformLocation(shader_program, "u_bodies");
+    num_bodies_uniform_loc = glGetUniformLocation(shader_program, "u_num_bodies");
+
+    glViewport(0, 0, screen_width, screen_height);
+    glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+
+    return true;
+}
+
+void Renderer::render(const std::vector<CelestialBody>& bodies) {
+    glClear(GL_COLOR_BUFFER_BIT);
+
+    glUniform2f(resolution_uniform_loc, screen_width, screen_height);
+
+    // Подготовка данных о телах для передачи в шейдер
+    std::vector<GLfloat> body_data;
+    body_data.reserve(bodies.size() * 3);
+    for (const auto& body : bodies) {
+        body_data.push_back(body.x);
+        body_data.push_back(body.y);
+        // Используем массу как радиус для визуализации
+        body_data.push_back(body.mass); 
+    }
+
+    glUniform1i(num_bodies_uniform_loc, bodies.size());
+    glUniform3fv(bodies_uniform_loc, bodies.size(), body_data.data());
+
+    // Вершины для полноэкранного прямоугольника
+    GLfloat vertices[] = {
+        -1.0f, -1.0f,
+         1.0f, -1.0f,
+        -1.0f,  1.0f,
+         1.0f,  1.0f
+    };
+
+    glVertexAttribPointer(pos_attrib_loc, 2, GL_FLOAT, GL_FALSE, 0, vertices);
+    glEnableVertexAttribArray(pos_attrib_loc);
+    glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+
+    SDL_GL_SwapWindow(window);
+}
+
+bool Renderer::handle_events() {
+    SDL_Event e;
+    while (SDL_PollEvent(&e) != 0) {
+        if (e.type == SDL_QUIT) {
+            return false;
+        }
+    }
+    return true;
+}
+
+GLuint Renderer::load_shader(GLenum type, const char* source) {
+    GLuint shader = glCreateShader(type);
+    glShaderSource(shader, 1, &source, NULL);
+    glCompileShader(shader);
+    GLint compiled;
+    glGetShaderiv(shader, GL_COMPILE_STATUS, &compiled);
+    if (!compiled) {
+        GLint info_len = 0;
+        glGetShaderiv(shader, GL_INFO_LOG_LENGTH, &info_len);
+        if (info_len > 1) {
+            char* info_log = (char*)malloc(sizeof(char) * info_len);
+            glGetShaderInfoLog(shader, info_len, NULL, info_log);
+            std::cerr << "Error compiling shader:\n" << info_log << std::endl;
+            free(info_log);
+        }
+        glDeleteShader(shader);
+        return 0;
+    }
+    return shader;
+}
+
+GLuint Renderer::create_shader_program(const char* vs_source, const char* fs_source) {
+    GLuint vs = load_shader(GL_VERTEX_SHADER, vs_source);
+    GLuint fs = load_shader(GL_FRAGMENT_SHADER, fs_source);
+
+    if (vs == 0 || fs == 0) return 0;
+
+    GLuint program = glCreateProgram();
+    glAttachShader(program, vs);
+    glAttachShader(program, fs);
+    glLinkProgram(program);
+
+    GLint linked;
+    glGetProgramiv(program, GL_LINK_STATUS, &linked);
+    if (!linked) {
+        GLint info_len = 0;
+        glGetProgramiv(program, GL_INFO_LOG_LENGTH, &info_len);
+        if (info_len > 1) {
+            char* info_log = (char*)malloc(sizeof(char) * info_len);
+            glGetProgramInfoLog(program, info_len, NULL, info_log);
+            std::cerr << "Error linking program:\n" << info_log << std::endl;
+            free(info_log);
+        }
+        glDeleteProgram(program);
+        return 0;
+    }
+
+    glDeleteShader(vs);
+    glDeleteShader(fs);
+
+    return program;
+}
