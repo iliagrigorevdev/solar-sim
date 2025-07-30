@@ -212,7 +212,7 @@ int main(int argc, char* argv[]) {
         return -1;
     }
 
-    #ifdef __EMSCRIPTEN__
+#ifdef __EMSCRIPTEN__
     static SimulationContext context_instance = { &renderer, &bodies };
     g_context = &context_instance;
     emscripten_set_resize_callback(EMSCRIPTEN_EVENT_TARGET_WINDOW, g_context, EM_FALSE, on_web_display_size_changed);
@@ -221,6 +221,9 @@ int main(int argc, char* argv[]) {
 #else
     bool running = true;
     while(running) {
+        int width, height;
+        glfwGetFramebufferSize(renderer.get_window(), &width, &height);
+
         running = renderer.handle_events();
         update_simulation(bodies);
         renderer.render(bodies);

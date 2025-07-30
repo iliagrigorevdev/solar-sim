@@ -42,6 +42,9 @@ bool Renderer::init() {
 
     glfwMakeContextCurrent(window);
 
+    glfwSetWindowUserPointer(window, this);
+    glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
+
     std::string vs_source = read_file("shader.vert");
     std::string fs_source = read_file("shader.frag");
 
@@ -145,6 +148,13 @@ GLuint Renderer::create_shader_program(const char* vs_source, const char* fs_sou
     glDeleteShader(fs);
 
     return program;
+}
+
+void Renderer::framebuffer_size_callback(GLFWwindow* window, int width, int height) {
+    Renderer* renderer = static_cast<Renderer*>(glfwGetWindowUserPointer(window));
+    if (renderer) {
+        renderer->handle_resize(width, height);
+    }
 }
 
 void Renderer::handle_resize(int width, int height) {

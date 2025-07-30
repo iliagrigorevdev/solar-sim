@@ -16,6 +16,7 @@ public:
     void render(const std::vector<CelestialBody>& bodies);
     bool handle_events();
     void handle_resize(int width, int height);
+    GLFWwindow* get_window() { return window; }
 
 private:
     int screen_width;
@@ -31,6 +32,8 @@ private:
     GLuint load_shader(GLenum type, const char* source);
     GLuint create_shader_program(const char* vs_source, const char* fs_source);
     std::string read_file(const std::string& path);
+
+    static void framebuffer_size_callback(GLFWwindow* window, int width, int height);
 };
 
 #endif // RENDERER_H
