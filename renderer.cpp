@@ -94,6 +94,9 @@ bool Renderer::handle_events() {
         if (e.type == SDL_QUIT) {
             return false;
         }
+        if (e.type == SDL_WINDOWEVENT && e.window.event == SDL_WINDOWEVENT_RESIZED) {
+            handle_resize(e.window.data1, e.window.data2);
+        }
     }
     return true;
 }
@@ -149,4 +152,11 @@ GLuint Renderer::create_shader_program(const char* vs_source, const char* fs_sou
     glDeleteShader(fs);
 
     return program;
+}
+
+void Renderer::handle_resize(int width, int height) {
+    screen_width = width;
+    screen_height = height;
+    SDL_SetWindowSize(window, width, height);
+    glViewport(0, 0, screen_width, screen_height);
 }

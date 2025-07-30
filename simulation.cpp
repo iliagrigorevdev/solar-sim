@@ -3,8 +3,10 @@
 #include <cmath>
 #include <random>
 #include <chrono>
+#include <algorithm>
 #ifdef __EMSCRIPTEN__
 #include <emscripten.h>
+#include <emscripten/html5.h>
 #endif
 #include "renderer.h"
 #include "simulation.h"
@@ -38,6 +40,21 @@ struct SimulationContext {
     Renderer* renderer;
     std::vector<CelestialBody>* bodies;
 };
+
+#ifdef __EMSCRIPTEN__
+// Global context for the callback
+SimulationContext* g_context = nullptr;
+
+EM_BOOL on_web_display_size_changed(int event_type, const EmscriptenUiEvent* ui_event, void* user_data) {
+    double width, height;
+    emscripten_get_element_css_size("canvas", &width, &height);
+    emscripten_set_canvas_element_size("#canvas", (int)width, (int)height);
+    if (g_context && g_context->renderer) {
+        g_context->renderer->handle_resize((int)width, (int)height);
+    }
+    return EM_TRUE;
+}
+#endif
 
 // Функция для инициализации небесных тел
 void initialize_bodies(std::vector<CelestialBody>& bodies) {
@@ -171,6 +188,7 @@ void main_loop(void* arg) {
     SimulationContext* context = static_cast<SimulationContext*>(arg);
     if (!context->renderer->handle_events()) {
         emscripten_cancel_main_loop();
+        return;
     }
     update_simulation(*context->bodies);
     context->renderer->render(*context->bodies);
@@ -181,14 +199,25 @@ int main(int argc, char* argv[]) {
     std::vector<CelestialBody> bodies;
     initialize_bodies(bodies);
 
-    Renderer renderer(800, 800);
+    int width, height;
+#ifdef __EMSCRIPTEN__
+    emscripten_get_canvas_element_size("#canvas", &width, &height);
+#else
+    width = 800;
+    height = 800;
+#endif
+
+    Renderer renderer(width, height);
     if (!renderer.init()) {
         return -1;
     }
 
     #ifdef __EMSCRIPTEN__
-    SimulationContext context = { &renderer, &bodies };
-    emscripten_set_main_loop_arg(main_loop, &context, 0, 1);
+    static SimulationContext context_instance = { &renderer, &bodies };
+    g_context = &context_instance;
+    emscripten_set_resize_callback(EMSCRIPTEN_EVENT_TARGET_WINDOW, g_context, EM_FALSE, on_web_display_size_changed);
+    on_web_display_size_changed(0, nullptr, g_context); // Initial call
+    emscripten_set_main_loop_arg(main_loop, g_context, 0, 1);
 #else
     bool running = true;
     while(running) {

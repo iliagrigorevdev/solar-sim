@@ -15,6 +15,7 @@ public:
     bool init();
     void render(const std::vector<CelestialBody>& bodies);
     bool handle_events();
+    void handle_resize(int width, int height);
 
 private:
     int screen_width;
