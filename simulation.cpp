@@ -14,6 +14,9 @@
 // Гравитационная постоянная (масштабирована для лучшей визуализации)
 const float G = 500.0f;
 
+// Плотность (для расчета радиуса)
+const float DENSITY = 1000.0f;
+
 // Количество небесных тел
 const int NUM_BODIES = 100;
 
@@ -62,7 +65,7 @@ void initialize_bodies(std::vector<CelestialBody>& bodies) {
         new_body.vx = dist_vel(generator);
         new_body.vy = dist_vel(generator);
         new_body.mass = dist_mass(generator);
-        new_body.radius = std::cbrt(new_body.mass); // Радиус пропорционален кубическому корню из массы
+        new_body.radius = std::cbrt(new_body.mass / DENSITY); // Радиус зависит от массы и плотности
         bodies.push_back(new_body);
     }
 }
@@ -102,7 +105,7 @@ void update_simulation(std::vector<CelestialBody>& bodies) {
                     
                     // Обновление массы и радиуса большего тела
                     larger->mass = total_mass;
-                    larger->radius = std::cbrt(larger->mass);
+                    larger->radius = std::cbrt(larger->mass / DENSITY);
 
                     // Помечаем меньшее тело для удаления
                     smaller->collided = true;
