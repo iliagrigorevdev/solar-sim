@@ -6,9 +6,10 @@
 Renderer::Renderer(int width, int height) : screen_width(width), screen_height(height) {}
 
 Renderer::~Renderer() {
-    if (context) SDL_GL_DeleteContext(context);
-    if (window) SDL_DestroyWindow(window);
-    SDL_Quit();
+    if (window) {
+        glfwDestroyWindow(window);
+    }
+    glfwTerminate();
 }
 
 std::string Renderer::read_file(const std::string& path) {
@@ -23,26 +24,23 @@ std::string Renderer::read_file(const std::string& path) {
 }
 
 bool Renderer::init() {
-    if (SDL_Init(SDL_INIT_VIDEO) < 0) {
-        std::cerr << "Could not initialize SDL: " << SDL_GetError() << std::endl;
+    if (!glfwInit()) {
+        std::cerr << "Could not initialize GLFW" << std::endl;
         return false;
     }
 
-    SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_ES);
-    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 2);
-    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 0);
+    glfwWindowHint(GLFW_CLIENT_API, GLFW_OPENGL_ES_API);
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 2);
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 0);
 
-    window = SDL_CreateWindow("Solar System Simulation", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, screen_width, screen_height, SDL_WINDOW_OPENGL | SDL_WINDOW_SHOWN);
+    window = glfwCreateWindow(screen_width, screen_height, "Solar System Simulation", NULL, NULL);
     if (!window) {
-        std::cerr << "Could not create window: " << SDL_GetError() << std::endl;
+        std::cerr << "Could not create window" << std::endl;
+        glfwTerminate();
         return false;
     }
 
-    context = SDL_GL_CreateContext(window);
-    if (!context) {
-        std::cerr << "Could not create OpenGL ES context: " << SDL_GetError() << std::endl;
-        return false;
-    }
+    glfwMakeContextCurrent(window);
 
     std::string vs_source = read_file("shader.vert");
     std::string fs_source = read_file("shader.frag");
@@ -85,19 +83,14 @@ void Renderer::render(const std::vector<CelestialBody>& bodies) {
         glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
     }
 
-    SDL_GL_SwapWindow(window);
+    glfwSwapBuffers(window);
 }
 
 bool Renderer::handle_events() {
-    SDL_Event e;
-    while (SDL_PollEvent(&e) != 0) {
-        if (e.type == SDL_QUIT) {
-            return false;
-        }
-        if (e.type == SDL_WINDOWEVENT && e.window.event == SDL_WINDOWEVENT_RESIZED) {
-            handle_resize(e.window.data1, e.window.data2);
-        }
+    if (glfwWindowShouldClose(window)) {
+        return false;
     }
+    glfwPollEvents();
     return true;
 }
 
@@ -157,6 +150,5 @@ GLuint Renderer::create_shader_program(const char* vs_source, const char* fs_sou
 void Renderer::handle_resize(int width, int height) {
     screen_width = width;
     screen_height = height;
-    SDL_SetWindowSize(window, width, height);
     glViewport(0, 0, screen_width, screen_height);
 }

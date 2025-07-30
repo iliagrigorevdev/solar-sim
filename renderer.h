@@ -3,8 +3,8 @@
 
 #include <vector>
 #include <string>
-#include <SDL2/SDL.h>
-#include <SDL2/SDL_opengles2.h>
+#include <GLFW/glfw3.h>
+#include <GLES2/gl2.h>
 #include "simulation.h"
 
 class Renderer {
@@ -20,8 +20,7 @@ public:
 private:
     int screen_width;
     int screen_height;
-    SDL_Window* window = nullptr;
-    SDL_GLContext context = nullptr;
+    GLFWwindow* window = nullptr;
 
     GLuint shader_program;
     GLint pos_attrib_loc;
