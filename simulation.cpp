@@ -56,11 +56,13 @@ void initialize_bodies(std::vector<CelestialBody>& bodies) {
         float y = r * sin(angle);
 
         CelestialBody new_body;
+        new_body.id = i;
         new_body.x = x;
         new_body.y = y;
         new_body.vx = dist_vel(generator);
         new_body.vy = dist_vel(generator);
         new_body.mass = dist_mass(generator);
+        new_body.radius = std::cbrt(new_body.mass); // Радиус пропорционален кубическому корню из массы
         bodies.push_back(new_body);
     }
 }
@@ -73,7 +75,57 @@ void update_simulation(std::vector<CelestialBody>& bodies) {
         body.ay = 0.0f;
     }
 
-    // 2. Вычисление сил и ускорений (O(N^2))
+    // 2. Проверка столкновений и слияние
+    for (size_t i = 0; i < bodies.size(); ++i) {
+        for (size_t j = i + 1; j < bodies.size(); ++j) {
+            if (bodies[i].collided || bodies[j].collided) continue;
+
+            float dx = bodies[j].x - bodies[i].x;
+            float dy = bodies[j].y - bodies[i].y;
+            float dist_sq = dx * dx + dy * dy;
+            float dist = std::sqrt(dist_sq);
+
+            float r1 = bodies[i].radius;
+            float r2 = bodies[j].radius;
+
+            if (dist < r1 + r2) { // Обнаружено столкновение
+                CelestialBody* smaller = (r1 < r2) ? &bodies[i] : &bodies[j];
+                CelestialBody* larger = (r1 < r2) ? &bodies[j] : &bodies[i];
+
+                float overlap = (smaller->radius + larger->radius) - dist;
+
+                if (overlap > 0.25f * smaller->radius) {
+                    // Сохранение импульса
+                    float total_mass = larger->mass + smaller->mass;
+                    larger->vx = (larger->vx * larger->mass + smaller->vx * smaller->mass) / total_mass;
+                    larger->vy = (larger->vy * larger->mass + smaller->vy * smaller->mass) / total_mass;
+                    
+                    // Обновление массы и радиуса большего тела
+                    larger->mass = total_mass;
+                    larger->radius = std::cbrt(larger->mass);
+
+                    // Помечаем меньшее тело для удаления
+                    smaller->collided = true;
+                }
+            }
+        }
+    }
+
+    // 3. Удаление "слипшихся" тел
+    bodies.erase(
+        std::remove_if(bodies.begin(), bodies.end(), [](const CelestialBody& body) {
+            return body.collided;
+        }),
+        bodies.end()
+    );
+
+    // 4. Сброс ускорений
+    for (auto& body : bodies) {
+        body.ax = 0.0f;
+        body.ay = 0.0f;
+    }
+
+    // 5. Вычисление сил и ускорений (O(N^2))
     for (size_t i = 0; i < bodies.size(); ++i) {
         for (size_t j = 0; j < bodies.size(); ++j) {
             if (i == j) continue;
@@ -100,7 +152,7 @@ void update_simulation(std::vector<CelestialBody>& bodies) {
         }
     }
 
-    // 3. Обновление скоростей и положений (интегрирование)
+    // 6. Обновление скоростей и положений (интегрирование)
     for (auto& body : bodies) {
         // Обновляем скорость
         body.vx += body.ax * DT;

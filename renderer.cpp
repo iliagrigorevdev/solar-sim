@@ -81,7 +81,7 @@ void Renderer::render(const std::vector<CelestialBody>& bodies) {
     // Рендерим каждое тело отдельно
     for (const auto& body : bodies) {
         glUniform2f(body_pos_uniform_loc, body.x, body.y);
-        glUniform1f(body_radius_uniform_loc, body.mass);
+        glUniform1f(body_radius_uniform_loc, body.radius);
         glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
     }
 
