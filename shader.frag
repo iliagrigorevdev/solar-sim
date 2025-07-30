@@ -10,7 +10,7 @@ float sdCircle(vec2 p, float r) {
 }
 
 void main() {
-    vec2 uv = (gl_FragCoord.xy * 2.0 - u_resolution.xy) / u_resolution.y;
+    vec2 uv = (gl_FragCoord.xy * 2.0 - u_resolution.xy) / min(u_resolution.x, u_resolution.y);
 
     // Масштабируем позицию и радиус
     vec2 scaled_pos = u_body_pos / 1000.0;

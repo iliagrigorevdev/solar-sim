@@ -148,6 +148,7 @@ GLuint Renderer::create_shader_program(const char* vs_source, const char* fs_sou
 }
 
 void Renderer::handle_resize(int width, int height) {
+    //std::cout << "Handling resize to: " << width << "x" << height << std::endl;
     screen_width = width;
     screen_height = height;
     glViewport(0, 0, screen_width, screen_height);
