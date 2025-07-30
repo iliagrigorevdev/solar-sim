@@ -17,7 +17,7 @@
 const float G = 500.0f;
 
 // Плотность (для расчета радиуса)
-const float DENSITY = 1000.0f;
+const float DENSITY = 1.0f;
 
 // Количество небесных тел
 const int NUM_BODIES = 100;
