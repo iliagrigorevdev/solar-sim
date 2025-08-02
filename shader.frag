@@ -21,7 +21,7 @@ void main() {
         if (i >= u_num_bodies) break;
 
         // Масштабируем позицию и радиус
-        vec2 scaled_pos = u_body_positions[i] / 1000.0;
+        vec2 scaled_pos = u_body_positions[i] / 200.0;
         float scaled_radius = u_body_radii[i] / 1000.0;
 
         float dist = sdCircle(uv - scaled_pos, scaled_radius);

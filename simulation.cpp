@@ -14,7 +14,7 @@
 // --- Константы для симуляции ---
 
 // Гравитационная постоянная (масштабирована для лучшей визуализации)
-const float G = 500.0f;
+const float G = 10.0f;
 
 // Плотность (для расчета радиуса)
 const float DENSITY = 1.0f;
@@ -61,7 +61,7 @@ void initialize_bodies(std::vector<CelestialBody>& bodies) {
     // Настройка генератора случайных чисел
     unsigned seed = std::chrono::system_clock::now().time_since_epoch().count();
     std::mt19937 generator(seed);
-    std::uniform_real_distribution<float> dist_radius(0.0f, INITIALIZATION_RADIUS);
+    std::uniform_real_distribution<float> dist_uniform_0_1(0.0f, 1.0f);
     std::uniform_real_distribution<float> dist_angle(0.0f, 2.0f * M_PI);
     std::uniform_real_distribution<float> dist_vel(-MAX_INITIAL_VELOCITY, MAX_INITIAL_VELOCITY);
     std::uniform_real_distribution<float> dist_mass(MIN_MASS, MAX_MASS);
@@ -69,7 +69,7 @@ void initialize_bodies(std::vector<CelestialBody>& bodies) {
     for (int i = 0; i < NUM_BODIES; ++i) {
         // Генерируем случайные полярные координаты и преобразуем их в декартовы
         // Использование sqrt() обеспечивает равномерное распределение по площади круга
-        float r = std::sqrt(dist_radius(generator)) * INITIALIZATION_RADIUS;
+        float r = INITIALIZATION_RADIUS * std::sqrt(dist_uniform_0_1(generator));
         float angle = dist_angle(generator);
 
         float x = r * cos(angle);
