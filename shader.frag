@@ -1,8 +1,11 @@
 precision mediump float;
 
 uniform vec2 u_resolution;
-uniform vec2 u_body_pos;    // Позиция тела (x, y)
-uniform float u_body_radius; // Радиус тела (масса)
+uniform int u_num_bodies;
+
+#define MAX_BODIES 100
+uniform vec2 u_body_positions[MAX_BODIES];
+uniform float u_body_radii[MAX_BODIES];
 
 // Функция знакового расстояния для круга
 float sdCircle(vec2 p, float r) {
@@ -12,13 +15,18 @@ float sdCircle(vec2 p, float r) {
 void main() {
     vec2 uv = (gl_FragCoord.xy * 2.0 - u_resolution.xy) / min(u_resolution.x, u_resolution.y);
 
-    // Масштабируем позицию и радиус
-    vec2 scaled_pos = u_body_pos / 1000.0;
-    float scaled_radius = u_body_radius / 1000.0;
+    float total_color = 0.0;
 
-    float dist = sdCircle(uv - scaled_pos, scaled_radius);
+    for (int i = 0; i < MAX_BODIES; i++) {
+        if (i >= u_num_bodies) break;
 
-    float color = 1.0 - smoothstep(0.0, 0.005, dist);
+        // Масштабируем позицию и радиус
+        vec2 scaled_pos = u_body_positions[i] / 1000.0;
+        float scaled_radius = u_body_radii[i] / 1000.0;
 
-    gl_FragColor = vec4(vec3(color), 1.0);
+        float dist = sdCircle(uv - scaled_pos, scaled_radius);
+        total_color += 1.0 - smoothstep(0.0, 0.005, dist);
+    }
+
+    gl_FragColor = vec4(vec3(total_color), 1.0);
 }

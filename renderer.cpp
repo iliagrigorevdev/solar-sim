@@ -56,8 +56,9 @@ bool Renderer::init() {
 
     pos_attrib_loc = glGetAttribLocation(shader_program, "a_position");
     resolution_uniform_loc = glGetUniformLocation(shader_program, "u_resolution");
-    body_pos_uniform_loc = glGetUniformLocation(shader_program, "u_body_pos");
-    body_radius_uniform_loc = glGetUniformLocation(shader_program, "u_body_radius");
+    body_positions_uniform_loc = glGetUniformLocation(shader_program, "u_body_positions");
+    body_radii_uniform_loc = glGetUniformLocation(shader_program, "u_body_radii");
+    num_bodies_uniform_loc = glGetUniformLocation(shader_program, "u_num_bodies");
 
     glViewport(0, 0, screen_width, screen_height);
     glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
@@ -79,12 +80,22 @@ void Renderer::render(const std::vector<CelestialBody>& bodies) {
     glVertexAttribPointer(pos_attrib_loc, 2, GL_FLOAT, GL_FALSE, 0, vertices);
     glEnableVertexAttribArray(pos_attrib_loc);
 
-    // Рендерим каждое тело отдельно
-    for (const auto& body : bodies) {
-        glUniform2f(body_pos_uniform_loc, body.x, body.y);
-        glUniform1f(body_radius_uniform_loc, body.radius);
-        glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+    const int num_bodies = bodies.size();
+    glUniform1i(num_bodies_uniform_loc, num_bodies);
+
+    std::vector<float> positions(num_bodies * 2);
+    std::vector<float> radii(num_bodies);
+
+    for (int i = 0; i < num_bodies; ++i) {
+        positions[i * 2] = bodies[i].x;
+        positions[i * 2 + 1] = bodies[i].y;
+        radii[i] = bodies[i].radius;
     }
+
+    glUniform2fv(body_positions_uniform_loc, num_bodies, positions.data());
+    glUniform1fv(body_radii_uniform_loc, num_bodies, radii.data());
+
+    glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
 
     glfwSwapBuffers(window);
 }
