@@ -8,6 +8,7 @@ uniform vec2 u_body_positions[MAX_BODIES];
 uniform float u_body_radii[MAX_BODIES];
 
 uniform float u_initialization_radius;
+uniform float u_zoom;
 
 // Функция знакового расстояния для круга
 float sdCircle(vec2 p, float r) {
@@ -16,6 +17,7 @@ float sdCircle(vec2 p, float r) {
 
 void main() {
     vec2 uv = (gl_FragCoord.xy * 2.0 - u_resolution.xy) / min(u_resolution.x, u_resolution.y);
+    uv /= u_zoom;
 
     float total_color = 0.0;
 

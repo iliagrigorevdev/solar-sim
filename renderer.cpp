@@ -61,6 +61,11 @@ bool Renderer::init(float initialization_radius) {
     body_radii_uniform_loc = glGetUniformLocation(shader_program, "u_body_radii");
     num_bodies_uniform_loc = glGetUniformLocation(shader_program, "u_num_bodies");
     initialization_radius_uniform_loc = glGetUniformLocation(shader_program, "u_initialization_radius");
+    zoom_uniform_loc = glGetUniformLocation(shader_program, "u_zoom");
+
+    emscripten_set_touchstart_callback(EMSCRIPTEN_EVENT_TARGET_WINDOW, this, true, touchstart_callback);
+    emscripten_set_touchmove_callback(EMSCRIPTEN_EVENT_TARGET_WINDOW, this, true, touchmove_callback);
+    emscripten_set_touchend_callback(EMSCRIPTEN_EVENT_TARGET_WINDOW, this, true, touchend_callback);
 
     glViewport(0, 0, screen_width, screen_height);
     glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
@@ -76,6 +81,7 @@ void Renderer::render(const std::vector<CelestialBody>& bodies) {
 
     glUniform1f(initialization_radius_uniform_loc, initialization_radius);
     glUniform2f(resolution_uniform_loc, screen_width, screen_height);
+    glUniform1f(zoom_uniform_loc, zoom);
 
     GLfloat vertices[] = {
         -1.0f, -1.0f, 1.0f, -1.0f, -1.0f, 1.0f, 1.0f, 1.0f
@@ -176,4 +182,50 @@ void Renderer::handle_resize(int width, int height) {
     screen_width = width;
     screen_height = height;
     glViewport(0, 0, screen_width, screen_height);
+}
+
+EM_BOOL Renderer::touchstart_callback(int eventType, const EmscriptenTouchEvent *touchEvent, void *userData) {
+    Renderer* renderer = static_cast<Renderer*>(userData);
+    if (renderer) {
+        renderer->handle_touchstart(touchEvent);
+    }
+    return EM_TRUE;
+}
+
+EM_BOOL Renderer::touchmove_callback(int eventType, const EmscriptenTouchEvent *touchEvent, void *userData) {
+    Renderer* renderer = static_cast<Renderer*>(userData);
+    if (renderer) {
+        renderer->handle_touchmove(touchEvent);
+    }
+    return EM_TRUE;
+}
+
+EM_BOOL Renderer::touchend_callback(int eventType, const EmscriptenTouchEvent *touchEvent, void *userData) {
+    Renderer* renderer = static_cast<Renderer*>(userData);
+    if (renderer) {
+        renderer->handle_touchend(touchEvent);
+    }
+    return EM_TRUE;
+}
+
+void Renderer::handle_touchstart(const EmscriptenTouchEvent *touchEvent) {
+    if (touchEvent->numTouches >= 2) {
+        const EmscriptenTouchPoint *t1 = &touchEvent->touches[0];
+        const EmscriptenTouchPoint *t2 = &touchEvent->touches[1];
+        initial_touch_dist = std::sqrt(std::pow(t1->clientX - t2->clientX, 2) + std::pow(t1->clientY - t2->clientY, 2));
+    }
+}
+
+void Renderer::handle_touchmove(const EmscriptenTouchEvent *touchEvent) {
+    if (touchEvent->numTouches >= 2) {
+        const EmscriptenTouchPoint *t1 = &touchEvent->touches[0];
+        const EmscriptenTouchPoint *t2 = &touchEvent->touches[1];
+        double current_touch_dist = std::sqrt(std::pow(t1->clientX - t2->clientX, 2) + std::pow(t1->clientY - t2->clientY, 2));
+        zoom *= 1.0 + (current_touch_dist - initial_touch_dist) / initial_touch_dist;
+        initial_touch_dist = current_touch_dist;
+    }
+}
+
+void Renderer::handle_touchend(const EmscriptenTouchEvent *touchEvent) {
+    initial_touch_dist = 0;
 }
