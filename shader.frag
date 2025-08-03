@@ -1,3 +1,4 @@
+#extension GL_OES_standard_derivatives : enable
 precision mediump float;
 
 uniform vec2 u_resolution;
@@ -30,7 +31,10 @@ void main() {
         float scaled_radius = max(u_body_radii[i] / u_initialization_radius, 2.0 / (resolution * u_zoom));
 
         float dist = sdCircle(uv - scaled_pos, scaled_radius);
-        total_color += 1.0 - smoothstep(0.0, 0.005, dist);
+        
+        // Используем fwidth для сглаживания, которое адаптируется к масштабу
+        float edge_width = fwidth(dist);
+        total_color += 1.0 - smoothstep(-edge_width, edge_width, dist);
     }
 
     gl_FragColor = vec4(vec3(total_color), 1.0);
