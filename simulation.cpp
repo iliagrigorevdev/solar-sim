@@ -32,8 +32,8 @@ const float DT = 0.05f;
 const float SOFTENING_FACTOR = 10.0f;
 
 // Максимальные значения для случайной генерации
-const float MAX_MASS = 50.0f;
-const float MIN_MASS = 5.0f;
+const float MAX_MASS = 0.1f;
+const float MIN_MASS = 0.001f;
 const float MAX_INITIAL_VELOCITY = 10.0f;
 
 struct SimulationContext {
@@ -74,6 +74,7 @@ void initialize_bodies(std::vector<CelestialBody>& bodies) {
     std::mt19937 generator(seed);
     std::uniform_real_distribution<float> dist_uniform_0_1(0.0f, 1.0f);
     std::uniform_real_distribution<float> dist_angle(0.0f, 2.0f * M_PI);
+    std::uniform_real_distribution<float> dist_mass(MIN_MASS, MAX_MASS);
 
     for (int i = 1; i < NUM_BODIES; ++i) {
         // Генерируем случайные полярные координаты и преобразуем их в декартовы
@@ -95,7 +96,7 @@ void initialize_bodies(std::vector<CelestialBody>& bodies) {
         new_body.y = y;
         new_body.vx = vx;
         new_body.vy = vy;
-        new_body.mass = 0.001f;
+        new_body.mass = dist_mass(generator);
         new_body.radius = std::cbrt(new_body.mass / DENSITY);
         bodies.push_back(new_body);
     }
