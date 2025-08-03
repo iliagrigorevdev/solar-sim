@@ -208,7 +208,7 @@ int main(int argc, char* argv[]) {
 #endif
 
     Renderer renderer(width, height);
-    if (!renderer.init()) {
+    if (!renderer.init(INITIALIZATION_RADIUS)) {
         return -1;
     }
 

@@ -23,7 +23,8 @@ std::string Renderer::read_file(const std::string& path) {
     return "";
 }
 
-bool Renderer::init() {
+bool Renderer::init(float initialization_radius) {
+    this->initialization_radius = initialization_radius;
     if (!glfwInit()) {
         std::cerr << "Could not initialize GLFW" << std::endl;
         return false;
@@ -59,6 +60,7 @@ bool Renderer::init() {
     body_positions_uniform_loc = glGetUniformLocation(shader_program, "u_body_positions");
     body_radii_uniform_loc = glGetUniformLocation(shader_program, "u_body_radii");
     num_bodies_uniform_loc = glGetUniformLocation(shader_program, "u_num_bodies");
+    initialization_radius_uniform_loc = glGetUniformLocation(shader_program, "u_initialization_radius");
 
     glViewport(0, 0, screen_width, screen_height);
     glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
@@ -72,6 +74,7 @@ bool Renderer::init() {
 void Renderer::render(const std::vector<CelestialBody>& bodies) {
     glClear(GL_COLOR_BUFFER_BIT);
 
+    glUniform1f(initialization_radius_uniform_loc, initialization_radius);
     glUniform2f(resolution_uniform_loc, screen_width, screen_height);
 
     GLfloat vertices[] = {

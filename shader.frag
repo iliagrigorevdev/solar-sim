@@ -7,6 +7,8 @@ uniform int u_num_bodies;
 uniform vec2 u_body_positions[MAX_BODIES];
 uniform float u_body_radii[MAX_BODIES];
 
+uniform float u_initialization_radius;
+
 // Функция знакового расстояния для круга
 float sdCircle(vec2 p, float r) {
     return length(p) - r;
@@ -21,8 +23,8 @@ void main() {
         if (i >= u_num_bodies) break;
 
         // Масштабируем позицию и радиус
-        vec2 scaled_pos = u_body_positions[i] / 200.0;
-        float scaled_radius = u_body_radii[i] / 200.0;
+        vec2 scaled_pos = u_body_positions[i] / u_initialization_radius;
+        float scaled_radius = u_body_radii[i] / u_initialization_radius;
 
         float dist = sdCircle(uv - scaled_pos, scaled_radius);
         total_color += 1.0 - smoothstep(0.0, 0.005, dist);

@@ -12,7 +12,7 @@ public:
     Renderer(int width, int height);
     ~Renderer();
 
-    bool init();
+    bool init(float initialization_radius);
     void render(const std::vector<CelestialBody>& bodies);
     bool handle_events();
     void handle_resize(int width, int height);
@@ -22,6 +22,7 @@ private:
     int screen_width;
     int screen_height;
     GLFWwindow* window = nullptr;
+    float initialization_radius;
 
     GLuint shader_program;
     GLint pos_attrib_loc;
@@ -29,6 +30,7 @@ private:
     GLint num_bodies_uniform_loc;
     GLint body_positions_uniform_loc;
     GLint body_radii_uniform_loc;
+    GLint initialization_radius_uniform_loc;
 
     GLuint load_shader(GLenum type, const char* source);
     GLuint create_shader_program(const char* vs_source, const char* fs_source);
