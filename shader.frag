@@ -1,5 +1,5 @@
 #extension GL_OES_standard_derivatives : enable
-precision mediump float;
+precision highp float;
 
 uniform vec2 u_resolution;
 uniform int u_num_bodies;
