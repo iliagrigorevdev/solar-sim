@@ -58,31 +58,45 @@ EM_BOOL on_web_display_size_changed(int event_type, const EmscriptenUiEvent* ui_
 
 // Функция для инициализации небесных тел
 void initialize_bodies(std::vector<CelestialBody>& bodies) {
+    // Центральный объект
+    CelestialBody central_body;
+    central_body.id = 0;
+    central_body.x = 0;
+    central_body.y = 0;
+    central_body.vx = 0;
+    central_body.vy = 0;
+    central_body.mass = 1000.0f;
+    central_body.radius = std::cbrt(central_body.mass / DENSITY);
+    bodies.push_back(central_body);
+
     // Настройка генератора случайных чисел
     unsigned seed = std::chrono::system_clock::now().time_since_epoch().count();
     std::mt19937 generator(seed);
     std::uniform_real_distribution<float> dist_uniform_0_1(0.0f, 1.0f);
     std::uniform_real_distribution<float> dist_angle(0.0f, 2.0f * M_PI);
-    std::uniform_real_distribution<float> dist_vel(-MAX_INITIAL_VELOCITY, MAX_INITIAL_VELOCITY);
-    std::uniform_real_distribution<float> dist_mass(MIN_MASS, MAX_MASS);
 
-    for (int i = 0; i < NUM_BODIES; ++i) {
+    for (int i = 1; i < NUM_BODIES; ++i) {
         // Генерируем случайные полярные координаты и преобразуем их в декартовы
-        // Использование sqrt() обеспечивает равномерное распределение по площади круга
         float r = INITIALIZATION_RADIUS * std::sqrt(dist_uniform_0_1(generator));
+        if (r < 10.0f) r = 10.0f; // Предотвращаем слишком близкое расположение тел к центру
         float angle = dist_angle(generator);
 
         float x = r * cos(angle);
         float y = r * sin(angle);
 
+        // Скорость для кругового движения: v = sqrt(G * M / r)
+        float speed = std::sqrt(G * bodies[0].mass / r);
+        float vx = -speed * sin(angle);
+        float vy = speed * cos(angle);
+
         CelestialBody new_body;
         new_body.id = i;
         new_body.x = x;
         new_body.y = y;
-        new_body.vx = dist_vel(generator);
-        new_body.vy = dist_vel(generator);
-        new_body.mass = dist_mass(generator);
-        new_body.radius = std::cbrt(new_body.mass / DENSITY); // Радиус зависит от массы и плотности
+        new_body.vx = vx;
+        new_body.vy = vy;
+        new_body.mass = 0.001f;
+        new_body.radius = std::cbrt(new_body.mass / DENSITY);
         bodies.push_back(new_body);
     }
 }
