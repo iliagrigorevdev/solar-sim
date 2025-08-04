@@ -51,9 +51,9 @@ bool Renderer::init(float initialization_radius) {
     initialization_radius_uniform_loc = glGetUniformLocation(shader_program, "u_initialization_radius");
     zoom_uniform_loc = glGetUniformLocation(shader_program, "u_zoom");
 
-    emscripten_set_touchstart_callback(EMSCRIPTEN_EVENT_TARGET_WINDOW, this, true, touchstart_callback);
-    emscripten_set_touchmove_callback(EMSCRIPTEN_EVENT_TARGET_WINDOW, this, true, touchmove_callback);
-    emscripten_set_touchend_callback(EMSCRIPTEN_EVENT_TARGET_WINDOW, this, true, touchend_callback);
+    emscripten_set_touchstart_callback("#canvas", this, true, touchstart_callback);
+    emscripten_set_touchmove_callback("#canvas", this, true, touchmove_callback);
+    emscripten_set_touchend_callback("#canvas", this, true, touchend_callback);
 
     glViewport(0, 0, screen_width, screen_height);
     glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
@@ -160,6 +160,9 @@ EM_BOOL Renderer::touchstart_callback(int eventType, const EmscriptenTouchEvent 
     if (renderer) {
         renderer->handle_touchstart(touchEvent);
     }
+    if (touchEvent->numTouches >= 2) {
+        return EM_FALSE;
+    }
     return EM_TRUE;
 }
 
@@ -168,6 +171,9 @@ EM_BOOL Renderer::touchmove_callback(int eventType, const EmscriptenTouchEvent *
     if (renderer) {
         renderer->handle_touchmove(touchEvent);
     }
+    if (touchEvent->numTouches >= 2) {
+        return EM_FALSE;
+    }
     return EM_TRUE;
 }
 
@@ -175,6 +181,9 @@ EM_BOOL Renderer::touchend_callback(int eventType, const EmscriptenTouchEvent *t
     Renderer* renderer = static_cast<Renderer*>(userData);
     if (renderer) {
         renderer->handle_touchend(touchEvent);
+    }
+    if (touchEvent->numTouches >= 2) {
+        return EM_FALSE;
     }
     return EM_TRUE;
 }
