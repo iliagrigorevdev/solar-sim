@@ -6,10 +6,6 @@
 Renderer::Renderer(int width, int height) : screen_width(width), screen_height(height) {}
 
 Renderer::~Renderer() {
-    if (window) {
-        glfwDestroyWindow(window);
-    }
-    glfwTerminate();
 }
 
 std::string Renderer::read_file(const std::string& path) {
@@ -25,26 +21,18 @@ std::string Renderer::read_file(const std::string& path) {
 
 bool Renderer::init(float initialization_radius) {
     this->initialization_radius = initialization_radius;
-    if (!glfwInit()) {
-        std::cerr << "Could not initialize GLFW" << std::endl;
+    
+    EmscriptenWebGLContextAttributes attrs;
+    emscripten_webgl_init_context_attributes(&attrs);
+    attrs.majorVersion = 2;
+    attrs.minorVersion = 0;
+
+    EMSCRIPTEN_WEBGL_CONTEXT_HANDLE context = emscripten_webgl_create_context("#canvas", &attrs);
+    if (context <= 0) {
+        std::cerr << "Could not create WebGL context" << std::endl;
         return false;
     }
-
-    glfwWindowHint(GLFW_CLIENT_API, GLFW_OPENGL_ES_API);
-    glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 2);
-    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 0);
-
-    window = glfwCreateWindow(screen_width, screen_height, "Solar System Simulation", NULL, NULL);
-    if (!window) {
-        std::cerr << "Could not create window" << std::endl;
-        glfwTerminate();
-        return false;
-    }
-
-    glfwMakeContextCurrent(window);
-
-    glfwSetWindowUserPointer(window, this);
-    glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
+    emscripten_webgl_make_context_current(context);
 
     std::string vs_source = read_file("shader.vert");
     std::string fs_source = read_file("shader.frag");
@@ -105,16 +93,6 @@ void Renderer::render(const std::vector<CelestialBody>& bodies) {
     glUniform1fv(body_radii_uniform_loc, num_bodies, radii.data());
 
     glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
-
-    glfwSwapBuffers(window);
-}
-
-bool Renderer::handle_events() {
-    if (glfwWindowShouldClose(window)) {
-        return false;
-    }
-    glfwPollEvents();
-    return true;
 }
 
 GLuint Renderer::load_shader(GLenum type, const char* source) {
@@ -168,13 +146,6 @@ GLuint Renderer::create_shader_program(const char* vs_source, const char* fs_sou
     glDeleteShader(fs);
 
     return program;
-}
-
-void Renderer::framebuffer_size_callback(GLFWwindow* window, int width, int height) {
-    Renderer* renderer = static_cast<Renderer*>(glfwGetWindowUserPointer(window));
-    if (renderer) {
-        renderer->handle_resize(width, height);
-    }
 }
 
 void Renderer::handle_resize(int width, int height) {

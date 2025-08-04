@@ -1,7 +1,7 @@
 #!/bin/bash
 mkdir -p bin
 
-emcc simulation.cpp renderer.cpp -o bin/simulation.js     -std=c++11     -s USE_GLFW=3     -s FULL_ES2=1     --preload-file shader.vert     --preload-file shader.frag
+emcc simulation.cpp renderer.cpp -o bin/simulation.js     -std=c++11     -s FULL_ES2=1     --preload-file shader.vert     --preload-file shader.frag
 
 cp index.html bin/index.html
 

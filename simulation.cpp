@@ -201,10 +201,6 @@ void update_simulation(std::vector<CelestialBody>& bodies) {
 #ifdef __EMSCRIPTEN__
 void main_loop(void* arg) {
     SimulationContext* context = static_cast<SimulationContext*>(arg);
-    if (!context->renderer->handle_events()) {
-        emscripten_cancel_main_loop();
-        return;
-    }
     update_simulation(*context->bodies);
     context->renderer->render(*context->bodies);
 }
@@ -234,15 +230,7 @@ int main(int argc, char* argv[]) {
     on_web_display_size_changed(0, nullptr, g_context); // Initial call
     emscripten_set_main_loop_arg(main_loop, g_context, 0, 1);
 #else
-    bool running = true;
-    while(running) {
-        int width, height;
-        glfwGetFramebufferSize(renderer.get_window(), &width, &height);
-
-        running = renderer.handle_events();
-        update_simulation(bodies);
-        renderer.render(bodies);
-    }
+    // This part of the code is not used in the emscripten build
 #endif
 
     return 0;
