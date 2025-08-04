@@ -5,16 +5,206 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Solar System Simulation</title>
     <style>
-        body { margin: 0; overflow: hidden; background-color: #000; }
-        canvas { width: 100vw; height: 100vh; }
+        body { margin: 0; overflow: hidden; background-color: #000; font-family: sans-serif; }
+        canvas { width: 100vw; height: 100vh; display: block; }
+        #settings-btn {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            font-size: 24px;
+            cursor: pointer;
+            color: white;
+            z-index: 100;
+            user-select: none;
+        }
+        #settings-panel {
+            position: absolute;
+            top: 60px;
+            right: 15px;
+            background-color: rgba(40, 40, 40, 0.9);
+            color: white;
+            padding: 20px;
+            border-radius: 8px;
+            z-index: 99;
+            width: 300px;
+            max-height: calc(100vh - 80px);
+            display: flex;
+            flex-direction: column;
+        }
+        #settings-panel.hidden {
+            display: none;
+        }
+        #settings-panel h3 {
+            margin-top: 0;
+            border-bottom: 1px solid #555;
+            padding-bottom: 10px;
+            flex-shrink: 0;
+        }
+        #settings-panel form {
+            flex-grow: 1;
+            overflow-y: auto;
+            padding-right: 10px;
+            margin-right: -10px;
+            min-height: 0;
+        }
+        #settings-panel form div {
+            margin-bottom: 12px;
+        }
+        #settings-panel label {
+            display: block;
+            margin-bottom: 5px;
+            font-size: 14px;
+            color: #ccc;
+        }
+        #settings-panel input {
+            width: 100%;
+            box-sizing: border-box;
+            background-color: #222;
+            color: white;
+            border: 1px solid #555;
+            padding: 8px;
+            border-radius: 4px;
+        }
+        #settings-panel .buttons {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 20px;
+            padding-top: 10px;
+            border-top: 1px solid #555;
+        }
+        #settings-panel button {
+            padding: 10px 15px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        #settings-panel #save-settings-btn {
+            background-color: #4CAF50;
+            color: white;
+        }
+        #settings-panel #close-settings-btn {
+            background-color: #777;
+            color: white;
+        }
     </style>
 </head>
 <body>
     <canvas id="canvas"></canvas>
+
+    <div id="settings-btn" title="Settings">⚙️</div>
+
+    <div id="settings-panel" class="hidden">
+        <h3>Simulation Settings</h3>
+        <form id="settings-form" onsubmit="return false;">
+            <div>
+                <label for="G">Gravitational Constant (G)</label>
+                <input type="number" id="G" name="G" step="any">
+            </div>
+            <div>
+                <label for="DENSITY">Density</label>
+                <input type="number" id="DENSITY" name="DENSITY" step="any">
+            </div>
+            <div>
+                <label for="NUM_BODIES">Number of Bodies</label>
+                <input type="number" id="NUM_BODIES" name="NUM_BODIES" step="1">
+            </div>
+            <div>
+                <label for="INITIALIZATION_RADIUS">Initialization Radius</label>
+                <input type="number" id="INITIALIZATION_RADIUS" name="INITIALIZATION_RADIUS" step="any">
+            </div>
+            <div>
+                <label for="DT">Time Step (DT)</label>
+                <input type="number" id="DT" name="DT" step="any">
+            </div>
+            <div>
+                <label for="SOFTENING_FACTOR">Softening Factor</label>
+                <input type="number" id="SOFTENING_FACTOR" name="SOFTENING_FACTOR" step="any">
+            </div>
+            <div>
+                <label for="MAX_MASS">Max Mass</label>
+                <input type="number" id="MAX_MASS" name="MAX_MASS" step="any">
+            </div>
+            <div>
+                <label for="MIN_MASS">Min Mass</label>
+                <input type="number" id="MIN_MASS" name="MIN_MASS" step="any">
+            </div>
+            <div class="buttons">
+                <button type="button" id="save-settings-btn">Apply & Reset</button>
+                <button type="button" id="close-settings-btn">Close</button>
+            </div>
+        </form>
+    </div>
+
     <script type='text/javascript'>
+        const settingsBtn = document.getElementById('settings-btn');
+        const settingsPanel = document.getElementById('settings-panel');
+        const closeBtn = document.getElementById('close-settings-btn');
+        const saveBtn = document.getElementById('save-settings-btn');
+        const form = document.getElementById('settings-form');
+        let wasmReady = false;
+
+        function updatePanelHeight() {
+            const topOffset = settingsPanel.offsetTop; // Top position of the panel
+            const bottomMargin = 20; // Desired margin from the bottom of the viewport
+            settingsPanel.style.maxHeight = (window.innerHeight - topOffset - bottomMargin) + 'px';
+        }
+
+        function populateSettingsForm() {
+            if (!wasmReady) return;
+            const params = Module.getSimulationParameters();
+            const keys = ["G", "DENSITY", "NUM_BODIES", "INITIALIZATION_RADIUS", "DT", "SOFTENING_FACTOR", "MAX_MASS", "MIN_MASS"];
+            for (const key of keys) {
+                if (form.elements[key] && params.hasOwnProperty(key)) {
+                    form.elements[key].value = params[key];
+                }
+            }
+        }
+
+        function applySettings() {
+            if (!wasmReady) return;
+            const newParams = {};
+            const formData = new FormData(form);
+            for (const [key, value] of formData.entries()) {
+                newParams[key] = Number(value) || 0;
+            }
+            Module.setSimulationParameters(newParams);
+            console.log("Settings applied and simulation reset.");
+            settingsPanel.classList.add('hidden');
+        }
+
+        settingsBtn.addEventListener('click', () => {
+            populateSettingsForm();
+            const isHidden = settingsPanel.classList.toggle('hidden');
+            if (!isHidden) {
+                updatePanelHeight(); // Set height when panel is opened
+            }
+        });
+
+        closeBtn.addEventListener('click', () => {
+            settingsPanel.classList.add('hidden');
+        });
+
+        saveBtn.addEventListener('click', applySettings);
+
+        window.addEventListener('resize', () => {
+            if (!settingsPanel.classList.contains('hidden')) {
+                updatePanelHeight(); // Also update on resize if panel is open
+            }
+        });
+
         var Module = {
-            canvas: (function() { return document.getElementById('canvas'); })()
+            canvas: (function() { return document.getElementById('canvas'); })(),
+            onRuntimeInitialized: function() {
+                console.log('WASM Runtime Initialized.');
+                wasmReady = true;
+                saveBtn.disabled = false;
+                populateSettingsForm();
+            }
         };
+        
+        saveBtn.disabled = true;
+
     </script>
     <script src="simulation.js"></script>
 </body>

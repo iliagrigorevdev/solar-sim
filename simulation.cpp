@@ -4,41 +4,19 @@
 #include <random>
 #include <chrono>
 #include <algorithm>
+#include <functional>
 #ifdef __EMSCRIPTEN__
 #include <emscripten.h>
 #include <emscripten/html5.h>
+#include <emscripten/bind.h>
 #endif
 #include "renderer.h"
 #include "simulation.h"
 
-// --- Константы для симуляции ---
-
-// Гравитационная постоянная (масштабирована для лучшей визуализации)
-const float G = 10.0f;
-
-// Плотность (для расчета радиуса)
-const float DENSITY = 1.0f;
-
-// Количество небесных тел
-const int NUM_BODIES = 100;
-
-// Радиус круга для начальной генерации объектов
-const float INITIALIZATION_RADIUS = 200.0f;
-
-// Шаг по времени для каждого обновления симуляции
-const float DT = 0.05f;
-
-// Смягчающий фактор для предотвращения бесконечных сил на малых расстояниях
-const float SOFTENING_FACTOR = 10.0f;
-
-// Максимальные значения для случайной генерации
-const float MAX_MASS = 0.1f;
-const float MIN_MASS = 0.001f;
-const float MAX_INITIAL_VELOCITY = 10.0f;
-
 struct SimulationContext {
     Renderer* renderer;
     std::vector<CelestialBody>* bodies;
+    SimulationParameters* params;
 };
 
 #ifdef __EMSCRIPTEN__
@@ -57,7 +35,9 @@ EM_BOOL on_web_display_size_changed(int event_type, const EmscriptenUiEvent* ui_
 #endif
 
 // Функция для инициализации небесных тел
-void initialize_bodies(std::vector<CelestialBody>& bodies) {
+void initialize_bodies(std::vector<CelestialBody>& bodies, const SimulationParameters& params) {
+    bodies.clear(); // Очищаем существующие тела
+
     // Центральный объект
     CelestialBody central_body;
     central_body.id = 0;
@@ -66,7 +46,7 @@ void initialize_bodies(std::vector<CelestialBody>& bodies) {
     central_body.vx = 0;
     central_body.vy = 0;
     central_body.mass = 1000.0f;
-    central_body.radius = std::cbrt(central_body.mass / DENSITY);
+    central_body.radius = std::cbrt(central_body.mass / params.DENSITY);
     bodies.push_back(central_body);
 
     // Настройка генератора случайных чисел
@@ -74,11 +54,11 @@ void initialize_bodies(std::vector<CelestialBody>& bodies) {
     std::mt19937 generator(seed);
     std::uniform_real_distribution<float> dist_uniform_0_1(0.0f, 1.0f);
     std::uniform_real_distribution<float> dist_angle(0.0f, 2.0f * M_PI);
-    std::uniform_real_distribution<float> dist_mass(MIN_MASS, MAX_MASS);
+    std::uniform_real_distribution<float> dist_mass(params.MIN_MASS, params.MAX_MASS);
 
-    for (int i = 1; i < NUM_BODIES; ++i) {
+    for (int i = 1; i < params.NUM_BODIES; ++i) {
         // Генерируем случайные полярные координаты и преобразуем их в декартовы
-        float r = INITIALIZATION_RADIUS * std::sqrt(dist_uniform_0_1(generator));
+        float r = params.INITIALIZATION_RADIUS * std::sqrt(dist_uniform_0_1(generator));
         if (r < 10.0f) r = 10.0f; // Предотвращаем слишком близкое расположение тел к центру
         float angle = dist_angle(generator);
 
@@ -86,7 +66,7 @@ void initialize_bodies(std::vector<CelestialBody>& bodies) {
         float y = r * sin(angle);
 
         // Скорость для кругового движения: v = sqrt(G * M / r)
-        float speed = std::sqrt(G * bodies[0].mass / r);
+        float speed = std::sqrt(params.G * bodies[0].mass / r);
         float vx = -speed * sin(angle);
         float vy = speed * cos(angle);
 
@@ -97,13 +77,13 @@ void initialize_bodies(std::vector<CelestialBody>& bodies) {
         new_body.vx = vx;
         new_body.vy = vy;
         new_body.mass = dist_mass(generator);
-        new_body.radius = std::cbrt(new_body.mass / DENSITY);
+        new_body.radius = std::cbrt(new_body.mass / params.DENSITY);
         bodies.push_back(new_body);
     }
 }
 
 // Функция для обновления состояния симуляции на один шаг
-void update_simulation(std::vector<CelestialBody>& bodies) {
+void update_simulation(std::vector<CelestialBody>& bodies, const SimulationParameters& params) {
     // 1. Сброс ускорений
     for (auto& body : bodies) {
         body.ax = 0.0f;
@@ -137,7 +117,7 @@ void update_simulation(std::vector<CelestialBody>& bodies) {
                     
                     // Обновление массы и радиуса большего тела
                     larger->mass = total_mass;
-                    larger->radius = std::cbrt(larger->mass / DENSITY);
+                    larger->radius = std::cbrt(larger->mass / params.DENSITY);
 
                     // Помечаем меньшее тело для удаления
                     smaller->collided = true;
@@ -170,11 +150,11 @@ void update_simulation(std::vector<CelestialBody>& bodies) {
             float dy = bodies[j].y - bodies[i].y;
 
             // Квадрат расстояния с фактором смягчения
-            float dist_sq = dx * dx + dy * dy + SOFTENING_FACTOR * SOFTENING_FACTOR;
+            float dist_sq = dx * dx + dy * dy + params.SOFTENING_FACTOR * params.SOFTENING_FACTOR;
             float dist = std::sqrt(dist_sq);
 
             // Сила гравитации: F = G * m1 * m2 / r^2
-            float force_magnitude = (G * bodies[i].mass * bodies[j].mass) / dist_sq;
+            float force_magnitude = (params.G * bodies[i].mass * bodies[j].mass) / dist_sq;
 
             // Направление силы (единичный вектор)
             float dir_x = dx / dist;
@@ -182,33 +162,52 @@ void update_simulation(std::vector<CelestialBody>& bodies) {
 
             // Добавляем компоненты силы к ускорению тела i
             // a = F/m, поэтому a = G * m2 / r^2
-            bodies[i].ax += dir_x * (G * bodies[j].mass) / dist_sq;
-            bodies[i].ay += dir_y * (G * bodies[j].mass) / dist_sq;
+            bodies[i].ax += dir_x * (params.G * bodies[j].mass) / dist_sq;
+            bodies[i].ay += dir_y * (params.G * bodies[j].mass) / dist_sq;
         }
     }
 
     // 6. Обновление скоростей и положений (интегрирование)
     for (auto& body : bodies) {
         // Обновляем скорость
-        body.vx += body.ax * DT;
-        body.vy += body.ay * DT;
+        body.vx += body.ax * params.DT;
+        body.vy += body.ay * params.DT;
         // Обновляем положение
-        body.x += body.vx * DT;
-        body.y += body.vy * DT;
+        body.x += body.vx * params.DT;
+        body.y += body.vy * params.DT;
     }
+}
+
+// Глобальные переменные для симуляции
+std::vector<CelestialBody> g_bodies;
+SimulationParameters g_params;
+Renderer* g_renderer = nullptr;
+
+// Функция для сброса симуляции
+void reset_simulation() {
+    initialize_bodies(g_bodies, g_params);
 }
 
 #ifdef __EMSCRIPTEN__
 void main_loop(void* arg) {
     SimulationContext* context = static_cast<SimulationContext*>(arg);
-    update_simulation(*context->bodies);
+    update_simulation(*context->bodies, *context->params);
     context->renderer->render(*context->bodies);
 }
 #endif
 
 int main(int argc, char* argv[]) {
-    std::vector<CelestialBody> bodies;
-    initialize_bodies(bodies);
+    // Устанавливаем параметры по умолчанию
+    g_params.G = 10.0f;
+    g_params.DENSITY = 1.0f;
+    g_params.NUM_BODIES = 100;
+    g_params.INITIALIZATION_RADIUS = 100.0f;
+    g_params.DT = 0.05f;
+    g_params.SOFTENING_FACTOR = 10.0f;
+    g_params.MAX_MASS = 1.0f;
+    g_params.MIN_MASS = 0.001f;
+
+    initialize_bodies(g_bodies, g_params);
 
     int width, height;
 #ifdef __EMSCRIPTEN__
@@ -219,19 +218,43 @@ int main(int argc, char* argv[]) {
 #endif
 
     Renderer renderer(width, height);
-    if (!renderer.init(INITIALIZATION_RADIUS)) {
+    g_renderer = &renderer;
+    if (!g_renderer->init(g_params.INITIALIZATION_RADIUS)) {
         return -1;
     }
 
 #ifdef __EMSCRIPTEN__
-    static SimulationContext context_instance = { &renderer, &bodies };
+    static SimulationContext context_instance = { g_renderer, &g_bodies, &g_params };
     g_context = &context_instance;
     emscripten_set_resize_callback(EMSCRIPTEN_EVENT_TARGET_WINDOW, g_context, EM_FALSE, on_web_display_size_changed);
     on_web_display_size_changed(0, nullptr, g_context); // Initial call
     emscripten_set_main_loop_arg(main_loop, g_context, 0, 1);
-#else
-    // This part of the code is not used in the emscripten build
 #endif
 
     return 0;
 }
+
+#ifdef __EMSCRIPTEN__
+EMSCRIPTEN_BINDINGS(simulation_module) {
+    emscripten::value_object<SimulationParameters>("SimulationParameters")
+        .field("G", &SimulationParameters::G)
+        .field("DENSITY", &SimulationParameters::DENSITY)
+        .field("NUM_BODIES", &SimulationParameters::NUM_BODIES)
+        .field("INITIALIZATION_RADIUS", &SimulationParameters::INITIALIZATION_RADIUS)
+        .field("DT", &SimulationParameters::DT)
+        .field("SOFTENING_FACTOR", &SimulationParameters::SOFTENING_FACTOR)
+        .field("MAX_MASS", &SimulationParameters::MAX_MASS)
+        .field("MIN_MASS", &SimulationParameters::MIN_MASS);
+
+    emscripten::function("getSimulationParameters", emscripten::select_overload<SimulationParameters()>([]() -> SimulationParameters {
+        return g_params;
+    }));
+
+    emscripten::function("setSimulationParameters", emscripten::select_overload<void(SimulationParameters)>([](SimulationParameters new_params) {
+        g_params = new_params;
+        reset_simulation();
+    }));
+
+    emscripten::function("resetSimulation", &reset_simulation);
+}
+#endif
