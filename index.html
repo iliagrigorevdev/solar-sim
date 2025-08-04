@@ -156,7 +156,12 @@
             const keys = ["G", "DENSITY", "NUM_BODIES", "INITIALIZATION_RADIUS", "DT", "SOFTENING_FACTOR", "MAX_MASS", "MIN_MASS"];
             for (const key of keys) {
                 if (form.elements[key] && params.hasOwnProperty(key)) {
-                    form.elements[key].value = params[key];
+                    const value = params[key];
+                    if (form.elements[key].step === 'any') { // Check if it's a float input
+                        form.elements[key].value = parseFloat(value.toPrecision(7));
+                    } else {
+                        form.elements[key].value = value;
+                    }
                 }
             }
         }
