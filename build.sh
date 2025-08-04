@@ -1,9 +1,4 @@
 #!/bin/bash
-mkdir -p bin
+emcc --bind simulation.cpp renderer.cpp -o docs/simulation.js -std=c++11 -s FULL_ES2=1 --preload-file shader.vert --preload-file shader.frag
 
-emcc --bind simulation.cpp renderer.cpp -o bin/simulation.js     -std=c++11     -s FULL_ES2=1     --preload-file shader.vert     --preload-file shader.frag
-
-cp index.html bin/index.html
-cp style.css bin/style.css
-
-python -m http.server --directory bin
+python -m http.server --directory docs
