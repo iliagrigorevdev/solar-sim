@@ -26,8 +26,8 @@
             padding: 20px;
             border-radius: 8px;
             z-index: 99;
-            width: 300px;
-            max-height: calc(100vh - 80px);
+            width: 200px;
+            max-height: calc(100vh - 200px);
             display: flex;
             flex-direction: column;
         }
@@ -144,12 +144,6 @@
         const form = document.getElementById('settings-form');
         let wasmReady = false;
 
-        function updatePanelHeight() {
-            const topOffset = settingsPanel.offsetTop; // Top position of the panel
-            const bottomMargin = 20; // Desired margin from the bottom of the viewport
-            settingsPanel.style.maxHeight = (window.innerHeight - topOffset - bottomMargin) + 'px';
-        }
-
         function populateSettingsForm() {
             if (!wasmReady) return;
             const params = Module.getSimulationParameters();
@@ -180,10 +174,7 @@
 
         settingsBtn.addEventListener('click', () => {
             populateSettingsForm();
-            const isHidden = settingsPanel.classList.toggle('hidden');
-            if (!isHidden) {
-                updatePanelHeight(); // Set height when panel is opened
-            }
+            settingsPanel.classList.toggle('hidden');
         });
 
         closeBtn.addEventListener('click', () => {
@@ -191,12 +182,6 @@
         });
 
         saveBtn.addEventListener('click', applySettings);
-
-        window.addEventListener('resize', () => {
-            if (!settingsPanel.classList.contains('hidden')) {
-                updatePanelHeight(); // Also update on resize if panel is open
-            }
-        });
 
         var Module = {
             canvas: (function() { return document.getElementById('canvas'); })(),
