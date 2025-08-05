@@ -27,7 +27,7 @@ var ENVIRONMENT_IS_SHELL = !ENVIRONMENT_IS_WEB && !ENVIRONMENT_IS_NODE && !ENVIR
 
 // --pre-jses are emitted after the Module integration code, so that they can
 // refer to Module (if they choose; they can also define Module)
-// include: /data/data/com.termux/files/usr/tmp/tmp3pg9btx4.js
+// include: /data/data/com.termux/files/usr/tmp/tmpqfdx6fef.js
 
   Module['expectedDataFileDownloads'] ??= 0;
   Module['expectedDataFileDownloads']++;
@@ -203,25 +203,25 @@ var REMOTE_PACKAGE_SIZE = metadata['remote_package_size'];
     }
 
     }
-    loadPackage({"files": [{"filename": "/shader.frag", "start": 0, "end": 1990}, {"filename": "/shader.vert", "start": 1990, "end": 2079}], "remote_package_size": 2079});
+    loadPackage({"files": [{"filename": "/shader.frag", "start": 0, "end": 2167}, {"filename": "/shader.vert", "start": 2167, "end": 2267}], "remote_package_size": 2267});
 
   })();
 
-// end include: /data/data/com.termux/files/usr/tmp/tmp3pg9btx4.js
-// include: /data/data/com.termux/files/usr/tmp/tmpsv6hivdz.js
+// end include: /data/data/com.termux/files/usr/tmp/tmpqfdx6fef.js
+// include: /data/data/com.termux/files/usr/tmp/tmp9hqm3v17.js
 
     // All the pre-js content up to here must remain later on, we need to run
     // it.
     if ((typeof ENVIRONMENT_IS_WASM_WORKER != 'undefined' && ENVIRONMENT_IS_WASM_WORKER) || (typeof ENVIRONMENT_IS_PTHREAD != 'undefined' && ENVIRONMENT_IS_PTHREAD) || (typeof ENVIRONMENT_IS_AUDIO_WORKLET != 'undefined' && ENVIRONMENT_IS_AUDIO_WORKLET)) Module['preRun'] = [];
     var necessaryPreJSTasks = Module['preRun'].slice();
-  // end include: /data/data/com.termux/files/usr/tmp/tmpsv6hivdz.js
-// include: /data/data/com.termux/files/usr/tmp/tmp4fvnd4te.js
+  // end include: /data/data/com.termux/files/usr/tmp/tmp9hqm3v17.js
+// include: /data/data/com.termux/files/usr/tmp/tmpfpin3krp.js
 
     if (!Module['preRun']) throw 'Module.preRun should exist because file support used it; did a pre-js delete it?';
     necessaryPreJSTasks.forEach((task) => {
       if (Module['preRun'].indexOf(task) < 0) throw 'All preRun tasks that exist before user pre-js code should remain after; did you replace Module or modify Module.preRun?';
     });
-  // end include: /data/data/com.termux/files/usr/tmp/tmp4fvnd4te.js
+  // end include: /data/data/com.termux/files/usr/tmp/tmpfpin3krp.js
 
 
 var arguments_ = [];
@@ -5879,6 +5879,15 @@ async function createWasm() {
       }
     };
   
+  var webgl_enable_WEBGL_draw_instanced_base_vertex_base_instance = (ctx) =>
+      // Closure is expected to be allowed to minify the '.dibvbi' property, so not accessing it quoted.
+      !!(ctx.dibvbi = ctx.getExtension('WEBGL_draw_instanced_base_vertex_base_instance'));
+  
+  var webgl_enable_WEBGL_multi_draw_instanced_base_vertex_base_instance = (ctx) => {
+      // Closure is expected to be allowed to minify the '.mdibvbi' property, so not accessing it quoted.
+      return !!(ctx.mdibvbi = ctx.getExtension('WEBGL_multi_draw_instanced_base_vertex_base_instance'));
+    };
+  
   var webgl_enable_EXT_polygon_offset_clamp = (ctx) =>
       !!(ctx.extPolygonOffsetClamp = ctx.getExtension('EXT_polygon_offset_clamp'));
   
@@ -5913,6 +5922,13 @@ async function createWasm() {
         'WEBGL_color_buffer_float',
         'WEBGL_depth_texture',
         'WEBGL_draw_buffers',
+        // WebGL 2 extensions
+        'EXT_color_buffer_float',
+        'EXT_conservative_depth',
+        'EXT_disjoint_timer_query_webgl2',
+        'EXT_texture_norm16',
+        'NV_shader_noperspective_interpolation',
+        'WEBGL_clip_cull_distance',
         // WebGL 1 and WebGL 2 extensions
         'EXT_clip_control',
         'EXT_color_buffer_half_float',
@@ -5949,6 +5965,8 @@ async function createWasm() {
   var GL = {
   counter:1,
   buffers:[],
+  mappedBuffers:{
+  },
   programs:[],
   framebuffers:[],
   renderbuffers:[],
@@ -5959,9 +5977,14 @@ async function createWasm() {
   offscreenCanvases:{
   },
   queries:[],
+  samplers:[],
+  transformFeedbacks:[],
+  syncs:[],
   byteSizeByTypeRoot:5120,
   byteSizeByType:[1,1,2,2,4,4,4,2,3,4,8],
   stringCache:{
+  },
+  stringiCache:{
   },
   unpackAlignment:4,
   unpackRowLength:0,
@@ -6156,6 +6179,10 @@ async function createWasm() {
         }
   
         var ctx =
+          (webGLContextAttributes.majorVersion > 1)
+          ?
+            canvas.getContext("webgl2", webGLContextAttributes)
+          :
           canvas.getContext("webgl", webGLContextAttributes);
   
         if (!ctx) return 0;
@@ -6252,6 +6279,21 @@ async function createWasm() {
         webgl_enable_ANGLE_instanced_arrays(GLctx);
         webgl_enable_OES_vertex_array_object(GLctx);
         webgl_enable_WEBGL_draw_buffers(GLctx);
+        // Extensions that are available from WebGL >= 2 (no-op if called on a WebGL 1 context active)
+        webgl_enable_WEBGL_draw_instanced_base_vertex_base_instance(GLctx);
+        webgl_enable_WEBGL_multi_draw_instanced_base_vertex_base_instance(GLctx);
+  
+        // On WebGL 2, EXT_disjoint_timer_query is replaced with an alternative
+        // that's based on core APIs, and exposes only the queryCounterEXT()
+        // entrypoint.
+        if (context.version >= 2) {
+          GLctx.disjointTimerQueryExt = GLctx.getExtension("EXT_disjoint_timer_query_webgl2");
+        }
+  
+        // However, Firefox exposes the WebGL 1 version on WebGL 2 as well and
+        // thus we look for the WebGL 1 version again if the WebGL 2 version
+        // isn't present. https://bugzilla.mozilla.org/show_bug.cgi?id=1328882
+        if (context.version < 2 || !GLctx.disjointTimerQueryExt)
         {
           GLctx.disjointTimerQueryExt = GLctx.getExtension("EXT_disjoint_timer_query");
         }
@@ -6296,9 +6338,6 @@ async function createWasm() {
       //  TODO: Make these into hard errors at some point in the future
       if (contextAttributes.majorVersion !== 1 && contextAttributes.majorVersion !== 2) {
         err(`Invalid WebGL version requested: ${contextAttributes.majorVersion}`);
-      }
-      if (contextAttributes.majorVersion !== 1) {
-        err('WebGL 2 requested but only WebGL 1 is supported (set -sMAX_WEBGL_VERSION=2 to fix the problem)');
       }
   
       var canvas = findCanvasEventTarget(target);
@@ -6477,8 +6516,14 @@ async function createWasm() {
   }
   }
 
+  var _glActiveTexture = (x0) => GLctx.activeTexture(x0);
+
   var _glAttachShader = (program, shader) => {
       GLctx.attachShader(GL.programs[program], GL.shaders[shader]);
+    };
+
+  var _glBindTexture = (target, texture) => {
+      GLctx.bindTexture(target, GL.textures[texture]);
     };
 
   var _glBlendFunc = (x0, x1) => GLctx.blendFunc(x0, x1);
@@ -6553,6 +6598,11 @@ async function createWasm() {
       var cb = GL.currentContext.clientBuffers[index];
       cb.enabled = true;
       GLctx.enableVertexAttribArray(index);
+    };
+
+  var _glGenTextures = (n, textures) => {
+      GL.genObject(n, textures, 'createTexture', GL.textures
+        );
     };
 
   
@@ -6764,6 +6814,97 @@ async function createWasm() {
       GLctx.shaderSource(GL.shaders[shader], source);
     };
 
+  var computeUnpackAlignedImageSize = (width, height, sizePerPixel) => {
+      function roundedToNextMultipleOf(x, y) {
+        return (x + y - 1) & -y;
+      }
+      var plainRowSize = (GL.unpackRowLength || width) * sizePerPixel;
+      var alignedRowSize = roundedToNextMultipleOf(plainRowSize, GL.unpackAlignment);
+      return height * alignedRowSize;
+    };
+  
+  var colorChannelsInGlTextureFormat = (format) => {
+      // Micro-optimizations for size: map format to size by subtracting smallest
+      // enum value (0x1902) from all values first.  Also omit the most common
+      // size value (1) from the list, which is assumed by formats not on the
+      // list.
+      var colorChannels = {
+        // 0x1902 /* GL_DEPTH_COMPONENT */ - 0x1902: 1,
+        // 0x1906 /* GL_ALPHA */ - 0x1902: 1,
+        5: 3,
+        6: 4,
+        // 0x1909 /* GL_LUMINANCE */ - 0x1902: 1,
+        8: 2,
+        29502: 3,
+        29504: 4,
+        // 0x1903 /* GL_RED */ - 0x1902: 1,
+        26917: 2,
+        26918: 2,
+        // 0x8D94 /* GL_RED_INTEGER */ - 0x1902: 1,
+        29846: 3,
+        29847: 4
+      };
+      return colorChannels[format - 0x1902]||1;
+    };
+  
+  var heapObjectForWebGLType = (type) => {
+      // Micro-optimization for size: Subtract lowest GL enum number (0x1400/* GL_BYTE */) from type to compare
+      // smaller values for the heap, for shorter generated code size.
+      // Also the type HEAPU16 is not tested for explicitly, but any unrecognized type will return out HEAPU16.
+      // (since most types are HEAPU16)
+      type -= 0x1400;
+      if (type == 0) return HEAP8;
+  
+      if (type == 1) return HEAPU8;
+  
+      if (type == 2) return HEAP16;
+  
+      if (type == 4) return HEAP32;
+  
+      if (type == 6) return HEAPF32;
+  
+      if (type == 5
+        || type == 28922
+        || type == 28520
+        || type == 30779
+        || type == 30782
+        )
+        return HEAPU32;
+  
+      return HEAPU16;
+    };
+  
+  var toTypedArrayIndex = (pointer, heap) =>
+      pointer >>> (31 - Math.clz32(heap.BYTES_PER_ELEMENT));
+  
+  var emscriptenWebGLGetTexPixelData = (type, format, width, height, pixels, internalFormat) => {
+      var heap = heapObjectForWebGLType(type);
+      var sizePerPixel = colorChannelsInGlTextureFormat(format) * heap.BYTES_PER_ELEMENT;
+      var bytes = computeUnpackAlignedImageSize(width, height, sizePerPixel);
+      return heap.subarray(toTypedArrayIndex(pixels, heap), toTypedArrayIndex(pixels + bytes, heap));
+    };
+  
+  
+  
+  var _glTexImage2D = (target, level, internalFormat, width, height, border, format, type, pixels) => {
+      if (GL.currentContext.version >= 2) {
+        if (GLctx.currentPixelUnpackBufferBinding) {
+          GLctx.texImage2D(target, level, internalFormat, width, height, border, format, type, pixels);
+          return;
+        }
+        if (pixels) {
+          var heap = heapObjectForWebGLType(type);
+          var index = toTypedArrayIndex(pixels, heap);
+          GLctx.texImage2D(target, level, internalFormat, width, height, border, format, type, heap, index);
+          return;
+        }
+      }
+      var pixelData = pixels ? emscriptenWebGLGetTexPixelData(type, format, width, height, pixels, internalFormat) : null;
+      GLctx.texImage2D(target, level, internalFormat, width, height, border, format, type, pixelData);
+    };
+
+  var _glTexParameteri = (x0, x1, x2) => GLctx.texParameteri(x0, x1, x2);
+
   var webglGetUniformLocation = (location) => {
       var p = GLctx.currentProgram;
   
@@ -6788,24 +6929,6 @@ async function createWasm() {
     };
 
   
-  var miniTempWebGLFloatBuffers = [];
-  
-  var _glUniform1fv = (location, count, value) => {
-  
-      if (count <= 288) {
-        // avoid allocation when uploading few enough uniforms
-        var view = miniTempWebGLFloatBuffers[count];
-        for (var i = 0; i < count; ++i) {
-          view[i] = HEAPF32[(((value)+(4*i))>>2)];
-        }
-      } else
-      {
-        var view = HEAPF32.subarray((((value)>>2)), ((value+count*4)>>2));
-      }
-      GLctx.uniform1fv(webglGetUniformLocation(location), view);
-    };
-
-  
   var _glUniform1i = (location, v0) => {
       GLctx.uniform1i(webglGetUniformLocation(location), v0);
     };
@@ -6813,25 +6936,6 @@ async function createWasm() {
   
   var _glUniform2f = (location, v0, v1) => {
       GLctx.uniform2f(webglGetUniformLocation(location), v0, v1);
-    };
-
-  
-  
-  var _glUniform2fv = (location, count, value) => {
-  
-      if (count <= 144) {
-        // avoid allocation when uploading few enough uniforms
-        count *= 2;
-        var view = miniTempWebGLFloatBuffers[count];
-        for (var i = 0; i < count; i += 2) {
-          view[i] = HEAPF32[(((value)+(4*i))>>2)];
-          view[i+1] = HEAPF32[(((value)+(4*i+4))>>2)];
-        }
-      } else
-      {
-        var view = HEAPF32.subarray((((value)>>2)), ((value+count*8)>>2));
-      }
-      GLctx.uniform2fv(webglGetUniformLocation(location), view);
     };
 
   var _glUseProgram = (program) => {
@@ -6898,11 +7002,6 @@ assert(emval_handles.length === 5 * 2);
       // start. This helps it optimize VBO double-buffering and reduce GPU stalls.
       registerPreMainLoop(() => GL.newRenderingFrameStarted());
     ;
-var miniTempWebGLFloatBuffersStorage = new Float32Array(288);
-  // Create GL_POOL_TEMP_BUFFERS_SIZE+1 temporary buffers, for uploads of size 0 through GL_POOL_TEMP_BUFFERS_SIZE inclusive
-  for (/**@suppress{duplicate}*/var i = 0; i <= 288; ++i) {
-    miniTempWebGLFloatBuffers[i] = miniTempWebGLFloatBuffersStorage.subarray(0, i);
-  };
 // End JS library code
 
 // include: postlibrary.js
@@ -7072,18 +7171,16 @@ if (Module['wasmBinary']) wasmBinary = Module['wasmBinary'];
   'getSocketAddress',
   'FS_mkdirTree',
   '_setNetworkCallback',
-  'heapObjectForWebGLType',
-  'toTypedArrayIndex',
   'emscriptenWebGLGet',
-  'computeUnpackAlignedImageSize',
-  'colorChannelsInGlTextureFormat',
-  'emscriptenWebGLGetTexPixelData',
   'emscriptenWebGLGetUniform',
   'emscriptenWebGLGetVertexAttrib',
   '__glGetActiveAttribOrUniform',
+  'emscriptenWebGLGetBufferBinding',
+  'emscriptenWebGLValidateMapBufferTarget',
   'writeGLArray',
   'registerWebGlEventCallback',
   'runAndAbortIfError',
+  'emscriptenWebGLGetIndexed',
   'ALLOC_NORMAL',
   'ALLOC_STACK',
   'allocate',
@@ -7373,6 +7470,8 @@ missingLibrarySymbols.forEach(missingLibrarySymbol)
   'tempFixedLengthArray',
   'miniTempWebGLFloatBuffers',
   'miniTempWebGLIntBuffers',
+  'heapObjectForWebGLType',
+  'toTypedArrayIndex',
   'webgl_enable_ANGLE_instanced_arrays',
   'webgl_enable_OES_vertex_array_object',
   'webgl_enable_WEBGL_draw_buffers',
@@ -7381,6 +7480,9 @@ missingLibrarySymbols.forEach(missingLibrarySymbol)
   'webgl_enable_EXT_clip_control',
   'webgl_enable_WEBGL_polygon_mode',
   'GL',
+  'computeUnpackAlignedImageSize',
+  'colorChannelsInGlTextureFormat',
+  'emscriptenWebGLGetTexPixelData',
   'webglGetUniformLocation',
   'webglPrepareUniformLocationsBeforeFirstUse',
   'webglGetLeftBracePos',
@@ -7391,6 +7493,8 @@ missingLibrarySymbols.forEach(missingLibrarySymbol)
   'IDBStore',
   'SDL',
   'SDL_gfx',
+  'webgl_enable_WEBGL_draw_instanced_base_vertex_base_instance',
+  'webgl_enable_WEBGL_multi_draw_instanced_base_vertex_base_instance',
   'allocateUTF8',
   'allocateUTF8OnStack',
   'print',
@@ -7562,7 +7666,11 @@ var wasmImports = {
   /** @export */
   fd_write: _fd_write,
   /** @export */
+  glActiveTexture: _glActiveTexture,
+  /** @export */
   glAttachShader: _glAttachShader,
+  /** @export */
+  glBindTexture: _glBindTexture,
   /** @export */
   glBlendFunc: _glBlendFunc,
   /** @export */
@@ -7586,6 +7694,8 @@ var wasmImports = {
   /** @export */
   glEnableVertexAttribArray: _glEnableVertexAttribArray,
   /** @export */
+  glGenTextures: _glGenTextures,
+  /** @export */
   glGetAttribLocation: _glGetAttribLocation,
   /** @export */
   glGetProgramInfoLog: _glGetProgramInfoLog,
@@ -7602,15 +7712,15 @@ var wasmImports = {
   /** @export */
   glShaderSource: _glShaderSource,
   /** @export */
-  glUniform1f: _glUniform1f,
+  glTexImage2D: _glTexImage2D,
   /** @export */
-  glUniform1fv: _glUniform1fv,
+  glTexParameteri: _glTexParameteri,
+  /** @export */
+  glUniform1f: _glUniform1f,
   /** @export */
   glUniform1i: _glUniform1i,
   /** @export */
   glUniform2f: _glUniform2f,
-  /** @export */
-  glUniform2fv: _glUniform2fv,
   /** @export */
   glUseProgram: _glUseProgram,
   /** @export */

@@ -30,8 +30,8 @@ private:
     GLint pos_attrib_loc;
     GLint resolution_uniform_loc;
     GLint num_bodies_uniform_loc;
-    GLint body_positions_uniform_loc;
-    GLint body_radii_uniform_loc;
+    GLuint data_texture_loc;
+    GLint data_texture_uniform_loc;
     GLint initialization_radius_uniform_loc;
     GLint zoom_uniform_loc;
 

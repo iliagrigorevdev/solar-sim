@@ -1,12 +1,16 @@
+#version 300 es
 #extension GL_OES_standard_derivatives : enable
 precision highp float;
 
+out vec4 out_color;
+
 uniform vec2 u_resolution;
 uniform int u_num_bodies;
+uniform sampler2D u_data_texture;
 
-#define MAX_BODIES 100
-uniform vec2 u_body_positions[MAX_BODIES];
-uniform float u_body_radii[MAX_BODIES];
+const float TEXTURE_WIDTH = 2048.0;
+const int MAX_BODIES = 2048;
+
 
 uniform float u_initialization_radius;
 uniform float u_zoom;
@@ -43,8 +47,12 @@ void main() {
     for (int i = 0; i < MAX_BODIES; i++) {
         if (i >= u_num_bodies) break;
 
-        vec2 scaled_pos = u_body_positions[i] / u_initialization_radius;
-        float scaled_radius = max(u_body_radii[i] / u_initialization_radius, 2.0 / (resolution * u_zoom));
+        vec4 data = texture(u_data_texture, vec2((float(i) + 0.5) / TEXTURE_WIDTH, 0.5));
+        vec2 body_position = data.xy;
+        float body_radius = data.z;
+
+        vec2 scaled_pos = body_position / u_initialization_radius;
+        float scaled_radius = max(body_radius / u_initialization_radius, 2.0 / (resolution * u_zoom));
 
         float dist = sdCircle(uv - scaled_pos, scaled_radius);
         
@@ -52,7 +60,7 @@ void main() {
         float alpha = 1.0 - smoothstep(-edge_width, edge_width, dist);
 
         if (alpha > 0.0) {
-            vec3 body_color = radiusToColor(u_body_radii[i]);
+            vec3 body_color = radiusToColor(body_radius);
             final_color += body_color * alpha;
             total_alpha += alpha;
         }
@@ -62,6 +70,5 @@ void main() {
         final_color /= total_alpha;
     }
 
-    gl_FragColor = vec4(final_color, min(total_alpha, 1.0));
+    out_color = vec4(final_color, min(total_alpha, 1.0));
 }
-

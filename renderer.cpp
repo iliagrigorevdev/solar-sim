@@ -1,3 +1,4 @@
+#include <GLES3/gl3.h>
 #include "renderer.h"
 #include <iostream>
 #include <fstream>
@@ -45,8 +46,7 @@ bool Renderer::init(float initialization_radius) {
 
     pos_attrib_loc = glGetAttribLocation(shader_program, "a_position");
     resolution_uniform_loc = glGetUniformLocation(shader_program, "u_resolution");
-    body_positions_uniform_loc = glGetUniformLocation(shader_program, "u_body_positions");
-    body_radii_uniform_loc = glGetUniformLocation(shader_program, "u_body_radii");
+    data_texture_uniform_loc = glGetUniformLocation(shader_program, "u_data_texture");
     num_bodies_uniform_loc = glGetUniformLocation(shader_program, "u_num_bodies");
     initialization_radius_uniform_loc = glGetUniformLocation(shader_program, "u_initialization_radius");
     zoom_uniform_loc = glGetUniformLocation(shader_program, "u_zoom");
@@ -60,6 +60,13 @@ bool Renderer::init(float initialization_radius) {
     // Включаем блендинг для корректного наложения объектов
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
+    glGenTextures(1, &data_texture_loc);
+    glBindTexture(GL_TEXTURE_2D, data_texture_loc);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 
     return true;
 }
@@ -80,17 +87,19 @@ void Renderer::render(const std::vector<CelestialBody>& bodies) {
     const int num_bodies = bodies.size();
     glUniform1i(num_bodies_uniform_loc, num_bodies);
 
-    std::vector<float> positions(num_bodies * 2);
-    std::vector<float> radii(num_bodies);
+    const int texture_width = 2048;
+    std::vector<float> texture_data(texture_width * 4, 0.0f);
 
     for (int i = 0; i < num_bodies; ++i) {
-        positions[i * 2] = bodies[i].x;
-        positions[i * 2 + 1] = bodies[i].y;
-        radii[i] = bodies[i].radius;
+        texture_data[i * 4 + 0] = bodies[i].x;
+        texture_data[i * 4 + 1] = bodies[i].y;
+        texture_data[i * 4 + 2] = bodies[i].radius;
     }
 
-    glUniform2fv(body_positions_uniform_loc, num_bodies, positions.data());
-    glUniform1fv(body_radii_uniform_loc, num_bodies, radii.data());
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, data_texture_loc);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, texture_width, 1, 0, GL_RGBA, GL_FLOAT, texture_data.data());
+    glUniform1i(data_texture_uniform_loc, 0);
 
     glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
 }
