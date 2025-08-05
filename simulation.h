@@ -26,6 +26,7 @@ struct SimulationParameters {
     float SOFTENING_FACTOR;   // Смягчающий фактор
     float MAX_MASS;           // Максимальная масса
     float MIN_MASS;           // Минимальная масса
+    float CENTRAL_BODY_MASS;  // Масса центрального объекта
 };
 
 // Объявление функций

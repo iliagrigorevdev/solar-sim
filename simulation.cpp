@@ -45,7 +45,7 @@ void initialize_bodies(std::vector<CelestialBody>& bodies, const SimulationParam
     central_body.y = 0;
     central_body.vx = 0;
     central_body.vy = 0;
-    central_body.mass = 1000.0f;
+    central_body.mass = params.CENTRAL_BODY_MASS;
     central_body.radius = std::cbrt(central_body.mass / params.DENSITY);
     bodies.push_back(central_body);
 
@@ -206,6 +206,7 @@ int main(int argc, char* argv[]) {
     g_params.SOFTENING_FACTOR = 10.0f;
     g_params.MAX_MASS = 1.0f;
     g_params.MIN_MASS = 0.001f;
+    g_params.CENTRAL_BODY_MASS = 1000.0f;
 
     initialize_bodies(g_bodies, g_params);
 
@@ -244,7 +245,8 @@ EMSCRIPTEN_BINDINGS(simulation_module) {
         .field("DT", &SimulationParameters::DT)
         .field("SOFTENING_FACTOR", &SimulationParameters::SOFTENING_FACTOR)
         .field("MAX_MASS", &SimulationParameters::MAX_MASS)
-        .field("MIN_MASS", &SimulationParameters::MIN_MASS);
+        .field("MIN_MASS", &SimulationParameters::MIN_MASS)
+        .field("CENTRAL_BODY_MASS", &SimulationParameters::CENTRAL_BODY_MASS);
 
     emscripten::function("getSimulationParameters", emscripten::select_overload<SimulationParameters()>([]() -> SimulationParameters {
         return g_params;
