@@ -11,6 +11,22 @@ uniform float u_body_radii[MAX_BODIES];
 uniform float u_initialization_radius;
 uniform float u_zoom;
 
+// Функция для отображения радиуса в цвет (синий-желтый-красный)
+vec3 radiusToColor(float radius) {
+    float log_radius = log(max(radius, 1.0));
+    float t = clamp(log_radius / log(10.0), 0.0, 1.0); // Нормализуем логарифм радиуса
+
+    vec3 blue = vec3(0.2, 0.5, 1.0);
+    vec3 yellow = vec3(1.0, 0.9, 0.2);
+    vec3 red = vec3(1.0, 0.3, 0.2);
+
+    if (t < 0.5) {
+        return mix(blue, yellow, t * 2.0);
+    } else {
+        return mix(yellow, red, (t - 0.5) * 2.0);
+    }
+}
+
 // Функция знакового расстояния для круга
 float sdCircle(vec2 p, float r) {
     return length(p) - r;
@@ -21,21 +37,31 @@ void main() {
     vec2 uv = (gl_FragCoord.xy * 2.0 - u_resolution.xy) / resolution;
     uv /= u_zoom;
 
-    float total_color = 0.0;
+    vec3 final_color = vec3(0.0);
+    float total_alpha = 0.0;
 
     for (int i = 0; i < MAX_BODIES; i++) {
         if (i >= u_num_bodies) break;
 
-        // Масштабируем позицию и радиус
         vec2 scaled_pos = u_body_positions[i] / u_initialization_radius;
         float scaled_radius = max(u_body_radii[i] / u_initialization_radius, 2.0 / (resolution * u_zoom));
 
         float dist = sdCircle(uv - scaled_pos, scaled_radius);
         
-        // Используем fwidth для сглаживания, которое адаптируется к масштабу
         float edge_width = fwidth(dist);
-        total_color += 1.0 - smoothstep(-edge_width, edge_width, dist);
+        float alpha = 1.0 - smoothstep(-edge_width, edge_width, dist);
+
+        if (alpha > 0.0) {
+            vec3 body_color = radiusToColor(u_body_radii[i]);
+            final_color += body_color * alpha;
+            total_alpha += alpha;
+        }
     }
 
-    gl_FragColor = vec4(vec3(total_color), 1.0);
+    if (total_alpha > 0.0) {
+        final_color /= total_alpha;
+    }
+
+    gl_FragColor = vec4(final_color, min(total_alpha, 1.0));
 }
+

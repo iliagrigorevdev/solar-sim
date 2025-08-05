@@ -59,7 +59,7 @@ bool Renderer::init(float initialization_radius) {
     glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
     // Включаем блендинг для корректного наложения объектов
     glEnable(GL_BLEND);
-    glBlendFunc(GL_SRC_ALPHA, GL_ONE);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
     return true;
 }
