@@ -12,13 +12,11 @@
 #endif
 #include "renderer.h"
 #include "simulation.h"
-#include "quadtree.h"
 
 struct SimulationContext {
     Renderer* renderer;
     std::vector<CelestialBody>* bodies;
     SimulationParameters* params;
-    Quadtree** quadtree;
 };
 
 #ifdef __EMSCRIPTEN__
@@ -85,43 +83,45 @@ void initialize_bodies(std::vector<CelestialBody>& bodies, const SimulationParam
 }
 
 // Функция для обновления состояния симуляции на один шаг
-void update_simulation(std::vector<CelestialBody>& bodies, Quadtree& qtree, const SimulationParameters& params) {
-    // 1. Очищаем и строим квадродерево
-    qtree.clear();
+void update_simulation(std::vector<CelestialBody>& bodies, const SimulationParameters& params) {
+    // 1. Сброс ускорений
     for (auto& body : bodies) {
-        qtree.insert(&body);
+        body.ax = 0.0f;
+        body.ay = 0.0f;
     }
 
-    // 2. Проверка столкновений и слияние (с использованием квадродерева)
-    for (auto& body_i : bodies) {
-        if (body_i.collided) continue;
+    // 2. Проверка столкновений и слияние
+    for (size_t i = 0; i < bodies.size(); ++i) {
+        for (size_t j = i + 1; j < bodies.size(); ++j) {
+            if (bodies[i].collided || bodies[j].collided) continue;
 
-        std::vector<CelestialBody*> potential_colliders;
-        Boundary query_range = { body_i.x, body_i.y, body_i.radius * 2.0f };
-        qtree.query(query_range, potential_colliders);
+            float dx = bodies[j].x - bodies[i].x;
+            float dy = bodies[j].y - bodies[i].y;
+            float dist_sq = dx * dx + dy * dy;
+            float dist = std::sqrt(dist_sq);
 
-        for (CelestialBody* body_j : potential_colliders) {
-            if (body_i.id >= body_j->id) continue;
-            if (body_j->collided) continue;
+            float r1 = bodies[i].radius;
+            float r2 = bodies[j].radius;
 
-            float dx = body_j->x - body_i.x;
-            float dy = body_j->y - body_i.y;
-            float dist = std::sqrt(dx * dx + dy * dy);
+            if (dist < r1 + r2) { // Обнаружено столкновение
+                CelestialBody* smaller = (r1 < r2) ? &bodies[i] : &bodies[j];
+                CelestialBody* larger = (r1 < r2) ? &bodies[j] : &bodies[i];
 
-            if (dist < body_i.radius + body_j->radius) {
-                CelestialBody* smaller = (body_i.radius < body_j->radius) ? &body_i : body_j;
-                CelestialBody* larger = (body_i.radius < body_j->radius) ? body_j : &body_i;
+                float overlap = (smaller->radius + larger->radius) - dist;
 
-                // Сохранение импульса
-                float total_mass = larger->mass + smaller->mass;
-                larger->vx = (larger->vx * larger->mass + smaller->vx * smaller->mass) / total_mass;
-                larger->vy = (larger->vy * larger->mass + smaller->vy * smaller->mass) / total_mass;
-                
-                // Обновление массы и радиуса
-                larger->mass = total_mass;
-                larger->radius = std::cbrt(larger->mass / params.DENSITY);
+                if (overlap > 0.25f * smaller->radius) {
+                    // Сохранение импульса
+                    float total_mass = larger->mass + smaller->mass;
+                    larger->vx = (larger->vx * larger->mass + smaller->vx * smaller->mass) / total_mass;
+                    larger->vy = (larger->vy * larger->mass + smaller->vy * smaller->mass) / total_mass;
+                    
+                    // Обновление массы и радиуса большего тела
+                    larger->mass = total_mass;
+                    larger->radius = std::cbrt(larger->mass / params.DENSITY);
 
-                smaller->collided = true;
+                    // Помечаем меньшее тело для удаления
+                    smaller->collided = true;
+                }
             }
         }
     }
@@ -140,16 +140,39 @@ void update_simulation(std::vector<CelestialBody>& bodies, Quadtree& qtree, cons
         body.ay = 0.0f;
     }
 
-    // 5. Вычисление сил и ускорений (с использованием алгоритма Барнса-Хата)
-    qtree.compute_mass_distribution();
-    for (auto& body : bodies) {
-        qtree.calculate_force(body, params.THETA, params.G, params.SOFTENING_FACTOR);
+    // 5. Вычисление сил и ускорений (O(N^2))
+    for (size_t i = 0; i < bodies.size(); ++i) {
+        for (size_t j = 0; j < bodies.size(); ++j) {
+            if (i == j) continue;
+
+            // Вектор расстояния от тела i до тела j
+            float dx = bodies[j].x - bodies[i].x;
+            float dy = bodies[j].y - bodies[i].y;
+
+            // Квадрат расстояния с фактором смягчения
+            float dist_sq = dx * dx + dy * dy + params.SOFTENING_FACTOR * params.SOFTENING_FACTOR;
+            float dist = std::sqrt(dist_sq);
+
+            // Сила гравитации: F = G * m1 * m2 / r^2
+            float force_magnitude = (params.G * bodies[i].mass * bodies[j].mass) / dist_sq;
+
+            // Направление силы (единичный вектор)
+            float dir_x = dx / dist;
+            float dir_y = dy / dist;
+
+            // Добавляем компоненты силы к ускорению тела i
+            // a = F/m, поэтому a = G * m2 / r^2
+            bodies[i].ax += dir_x * (params.G * bodies[j].mass) / dist_sq;
+            bodies[i].ay += dir_y * (params.G * bodies[j].mass) / dist_sq;
+        }
     }
 
-    // 6. Обновление скоростей и положений
+    // 6. Обновление скоростей и положений (интегрирование)
     for (auto& body : bodies) {
+        // Обновляем скорость
         body.vx += body.ax * params.DT;
         body.vy += body.ay * params.DT;
+        // Обновляем положение
         body.x += body.vx * params.DT;
         body.y += body.vy * params.DT;
     }
@@ -159,22 +182,16 @@ void update_simulation(std::vector<CelestialBody>& bodies, Quadtree& qtree, cons
 std::vector<CelestialBody> g_bodies;
 SimulationParameters g_params;
 Renderer* g_renderer = nullptr;
-Quadtree* g_quadtree = nullptr;
 
 // Функция для сброса симуляции
 void reset_simulation() {
     initialize_bodies(g_bodies, g_params);
-    if (g_quadtree) {
-        delete g_quadtree;
-    }
-    Boundary boundary = { 0.0f, 0.0f, g_params.INITIALIZATION_RADIUS * 2.0f };
-    g_quadtree = new Quadtree(boundary, 4);
 }
 
 #ifdef __EMSCRIPTEN__
 void main_loop(void* arg) {
     SimulationContext* context = static_cast<SimulationContext*>(arg);
-    update_simulation(*context->bodies, **context->quadtree, *context->params);
+    update_simulation(*context->bodies, *context->params);
     context->renderer->render(*context->bodies);
 }
 #endif
@@ -183,18 +200,15 @@ int main(int argc, char* argv[]) {
     // Устанавливаем параметры по умолчанию
     g_params.G = 10.0f;
     g_params.DENSITY = 1.0f;
-    g_params.NUM_BODIES = 1000;
+    g_params.NUM_BODIES = 100;
     g_params.INITIALIZATION_RADIUS = 100.0f;
     g_params.DT = 0.05f;
     g_params.SOFTENING_FACTOR = 10.0f;
-    g_params.MAX_MASS = 0.1f;
+    g_params.MAX_MASS = 1.0f;
     g_params.MIN_MASS = 0.001f;
     g_params.CENTRAL_BODY_MASS = 1000.0f;
 
     initialize_bodies(g_bodies, g_params);
-
-    Boundary boundary = { 0.0f, 0.0f, g_params.INITIALIZATION_RADIUS * 2.0f };
-    g_quadtree = new Quadtree(boundary, 4);
 
     int width, height;
 #ifdef __EMSCRIPTEN__
@@ -211,7 +225,7 @@ int main(int argc, char* argv[]) {
     }
 
 #ifdef __EMSCRIPTEN__
-    static SimulationContext context_instance = { g_renderer, &g_bodies, &g_params, &g_quadtree };
+    static SimulationContext context_instance = { g_renderer, &g_bodies, &g_params };
     g_context = &context_instance;
     emscripten_set_resize_callback(EMSCRIPTEN_EVENT_TARGET_WINDOW, g_context, EM_FALSE, on_web_display_size_changed);
     on_web_display_size_changed(0, nullptr, g_context); // Initial call
@@ -232,8 +246,7 @@ EMSCRIPTEN_BINDINGS(simulation_module) {
         .field("SOFTENING_FACTOR", &SimulationParameters::SOFTENING_FACTOR)
         .field("MAX_MASS", &SimulationParameters::MAX_MASS)
         .field("MIN_MASS", &SimulationParameters::MIN_MASS)
-        .field("CENTRAL_BODY_MASS", &SimulationParameters::CENTRAL_BODY_MASS)
-        .field("THETA", &SimulationParameters::THETA);
+        .field("CENTRAL_BODY_MASS", &SimulationParameters::CENTRAL_BODY_MASS);
 
     emscripten::function("getSimulationParameters", emscripten::select_overload<SimulationParameters()>([]() -> SimulationParameters {
         return g_params;

@@ -2,7 +2,6 @@
 #define SIMULATION_H
 
 #include <vector>
-#include "quadtree.h"
 
 // Структура для представления небесного тела
 struct CelestialBody {
@@ -28,11 +27,10 @@ struct SimulationParameters {
     float MAX_MASS;           // Максимальная масса
     float MIN_MASS;           // Минимальная масса
     float CENTRAL_BODY_MASS;  // Масса центрального объекта
-    float THETA = 0.5f;       // Точность для алгоритма Барнса-Хата
 };
 
 // Объявление функций
 void initialize_bodies(std::vector<CelestialBody>& bodies, const SimulationParameters& params);
-void update_simulation(std::vector<CelestialBody>& bodies, Quadtree& qtree, const SimulationParameters& params);
+void update_simulation(std::vector<CelestialBody>& bodies, const SimulationParameters& params);
 
 #endif // SIMULATION_H
