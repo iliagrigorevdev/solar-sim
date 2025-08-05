@@ -50,13 +50,16 @@
                 <label for="CENTRAL_BODY_MASS">Central Body Mass</label>
                 <input type="number" id="CENTRAL_BODY_MASS" name="CENTRAL_BODY_MASS" step="any">
             </div>
+            <div>
+                <label for="THETA">Theta (Barnes-Hut)</label>
+                <input type="number" id="THETA" name="THETA" step="any">
+            </div>
         </form>
         <div class="buttons">
             <button type="button" id="save-settings-btn">Apply & Reset</button>
             <button type="button" id="close-settings-btn">Close</button>
         </div>
     </div>
-
     <script type='text/javascript'>
         const settingsBtn = document.getElementById('settings-btn');
         const settingsPanel = document.getElementById('settings-panel');
@@ -68,7 +71,7 @@
         function populateSettingsForm() {
             if (!wasmReady) return;
             const params = Module.getSimulationParameters();
-            const keys = ["G", "DENSITY", "NUM_BODIES", "INITIALIZATION_RADIUS", "DT", "SOFTENING_FACTOR", "MAX_MASS", "MIN_MASS", "CENTRAL_BODY_MASS"];
+            const keys = ["G", "DENSITY", "NUM_BODIES", "INITIALIZATION_RADIUS", "DT", "SOFTENING_FACTOR", "MAX_MASS", "MIN_MASS", "CENTRAL_BODY_MASS", "THETA"];
             for (const key of keys) {
                 if (form.elements[key] && params.hasOwnProperty(key)) {
                     const value = params[key];
