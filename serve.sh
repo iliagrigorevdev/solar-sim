@@ -1,2 +1,2 @@
 #!/bin/bash
-python -m http.server --directory docs
+python server_no_cache.py
