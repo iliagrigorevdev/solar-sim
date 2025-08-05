@@ -182,6 +182,7 @@ void update_simulation(std::vector<CelestialBody>& bodies, const SimulationParam
 std::vector<CelestialBody> g_bodies;
 SimulationParameters g_params;
 Renderer* g_renderer = nullptr;
+int g_simulation_speed = 1;
 
 // Функция для сброса симуляции
 void reset_simulation() {
@@ -191,7 +192,9 @@ void reset_simulation() {
 #ifdef __EMSCRIPTEN__
 void main_loop(void* arg) {
     SimulationContext* context = static_cast<SimulationContext*>(arg);
-    update_simulation(*context->bodies, *context->params);
+    for (int i = 0; i < g_simulation_speed; ++i) {
+        update_simulation(*context->bodies, *context->params);
+    }
     context->renderer->render(*context->bodies);
 }
 #endif
@@ -236,6 +239,21 @@ int main(int argc, char* argv[]) {
 }
 
 #ifdef __EMSCRIPTEN__
+
+int get_simulation_speed() {
+    return g_simulation_speed;
+}
+
+void increase_simulation_speed() {
+    g_simulation_speed++;
+}
+
+void decrease_simulation_speed() {
+    if (g_simulation_speed > 1) {
+        g_simulation_speed--;
+    }
+}
+
 EMSCRIPTEN_BINDINGS(simulation_module) {
     emscripten::value_object<SimulationParameters>("SimulationParameters")
         .field("G", &SimulationParameters::G)
@@ -258,5 +276,9 @@ EMSCRIPTEN_BINDINGS(simulation_module) {
     }));
 
     emscripten::function("resetSimulation", &reset_simulation);
+
+    emscripten::function("getSimulationSpeed", &get_simulation_speed);
+    emscripten::function("increaseSimulationSpeed", &increase_simulation_speed);
+    emscripten::function("decreaseSimulationSpeed", &decrease_simulation_speed);
 }
 #endif

@@ -13,6 +13,15 @@
 
     <div id="settings-panel" class="hidden">
         <h3>Simulation Settings</h3>
+        <div class="settings-row">
+            <label>Simulation Speed</label>
+            <div class="speed-control">
+                <button type="button" id="decrease-speed-btn">-</button>
+                <span id="simulation-speed">1</span>
+                <button type="button" id="increase-speed-btn">+</button>
+            </div>
+        </div>
+        <div class="divider"></div>
         <form id="settings-form" onsubmit="return false;">
             <div>
                 <label for="G">Gravitational Constant (G)</label>
@@ -63,10 +72,31 @@
         const closeBtn = document.getElementById('close-settings-btn');
         const saveBtn = document.getElementById('save-settings-btn');
         const form = document.getElementById('settings-form');
+        const decreaseSpeedBtn = document.getElementById('decrease-speed-btn');
+        const increaseSpeedBtn = document.getElementById('increase-speed-btn');
+        const simulationSpeedEl = document.getElementById('simulation-speed');
         let wasmReady = false;
+
+        function updateSimulationSpeed() {
+            if (!wasmReady) return;
+            simulationSpeedEl.textContent = Module.getSimulationSpeed();
+        }
+
+        decreaseSpeedBtn.addEventListener('click', () => {
+            if (!wasmReady) return;
+            Module.decreaseSimulationSpeed();
+            updateSimulationSpeed();
+        });
+
+        increaseSpeedBtn.addEventListener('click', () => {
+            if (!wasmReady) return;
+            Module.increaseSimulationSpeed();
+            updateSimulationSpeed();
+        });
 
         function populateSettingsForm() {
             if (!wasmReady) return;
+            updateSimulationSpeed();
             const params = Module.getSimulationParameters();
             const keys = ["G", "DENSITY", "NUM_BODIES", "INITIALIZATION_RADIUS", "DT", "SOFTENING_FACTOR", "MAX_MASS", "MIN_MASS", "CENTRAL_BODY_MASS"];
             for (const key of keys) {

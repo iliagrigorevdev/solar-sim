@@ -41,7 +41,7 @@ canvas { width: 100vw; height: 100vh; display: block; }
     min-height: 0;
 }
 #settings-panel form div {
-    margin-bottom: 12px;
+    margin-bottom: 10px;
 }
 #settings-panel label {
     display: block;
@@ -80,4 +80,44 @@ canvas { width: 100vw; height: 100vh; display: block; }
 #settings-panel #close-settings-btn {
     background-color: #777;
     color: white;
+}
+
+.divider {
+    height: 1px;
+    background-color: #555;
+    margin: 10px 0;
+}
+
+.settings-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+}
+
+.speed-control {
+    display: flex;
+    align-items: center;
+}
+
+.speed-control button {
+    width: 20px;
+    height: 20px;
+    font-size: 18px;
+    padding: 0;
+    background-color: #555;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.speed-control span {
+    margin: 0 10px;
+    font-size: 16px;
+    min-width: 20px;
+    text-align: center;
 }
