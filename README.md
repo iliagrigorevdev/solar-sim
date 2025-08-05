@@ -34,7 +34,7 @@ The C++ code is compiled to WebAssembly using Emscripten, which allows it to run
 
 ### Prerequisites
 
-- [Emscripten SDK](https://emscripten.org/docs/getting_started/downloads.html): Required to compile the C++ code to WebAssembly.
+- [Emscripten SDK](https://emscripten.org/docs/getting_started/downloads.html): Required to compile the C++ code to WebAssembly. For Termux, use `pkg install emscripten`.
 - [Python 3](https://www.python.org/downloads/): Used to run a simple HTTP server for local development.
 
 ### Build Steps
