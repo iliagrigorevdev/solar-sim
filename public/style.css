@@ -4,12 +4,16 @@ canvas { width: 100vw; height: 100vh; display: block; }
     position: absolute;
     top: 15px;
     right: 15px;
-    font-size: 24px;
     cursor: pointer;
-    color: white;
     z-index: 100;
     user-select: none;
 }
+
+#settings-btn img {
+    width: 24px;
+    height: 24px;
+}
+
 #settings-panel {
     position: absolute;
     top: 60px;
