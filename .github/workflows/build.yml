@@ -1,21 +1,27 @@
-name: Build Project
+name: Build and Deploy
 
 on:
   push:
     branches: [ "main" ]
-  pull_request:
-    branches: [ "main" ]
 
 jobs:
-  build:
+  build-and-deploy:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v3
-    - name: Set up Emscripten
-      uses: mymindstorm/setup-emsdk@v11
-      with:
-        version: 3.1.35
-    - name: Build
-      run: |
-        chmod +x build.sh
-        ./build.sh
+      - uses: actions/checkout@v3
+
+      - name: Set up Emscripten
+        uses: mymindstorm/setup-emsdk@v11
+        with:
+          version: 3.1.35
+
+      - name: Build
+        run: |
+          chmod +x build.sh
+          ./build.sh
+
+      - name: Deploy to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./docs
