@@ -34,7 +34,7 @@ var Module = typeof Module != 'undefined' ? Module : {};
         // web worker
         PACKAGE_PATH = encodeURIComponent(location.pathname.toString().substring(0, location.pathname.toString().lastIndexOf('/')) + '/');
       }
-      var PACKAGE_NAME = 'docs/simulation.data';
+      var PACKAGE_NAME = 'public/simulation.data';
       var REMOTE_PACKAGE_BASE = 'simulation.data';
       if (typeof Module['locateFilePackage'] === 'function' && !Module['locateFile']) {
         Module['locateFile'] = Module['locateFilePackage'];
@@ -165,10 +165,10 @@ var REMOTE_PACKAGE_SIZE = metadata['remote_package_size'];
           var files = metadata['files'];
           for (var i = 0; i < files.length; ++i) {
             DataRequest.prototype.requests[files[i].filename].onload();
-          }          Module['removeRunDependency']('datafile_docs/simulation.data');
+          }          Module['removeRunDependency']('datafile_public/simulation.data');
 
       };
-      Module['addRunDependency']('datafile_docs/simulation.data');
+      Module['addRunDependency']('datafile_public/simulation.data');
 
       if (!Module.preloadResults) Module.preloadResults = {};
 
