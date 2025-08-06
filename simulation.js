@@ -189,7 +189,7 @@ var REMOTE_PACKAGE_SIZE = metadata['remote_package_size'];
     }
 
     }
-    loadPackage({"files": [{"filename": "/shader.frag", "start": 0, "end": 2462}, {"filename": "/shader.vert", "start": 2462, "end": 2562}], "remote_package_size": 2562});
+    loadPackage({"files": [{"filename": "/shader.frag", "start": 0, "end": 2591}, {"filename": "/shader.vert", "start": 2591, "end": 2691}], "remote_package_size": 2691});
 
   })();
 

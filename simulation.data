@@ -14,14 +14,17 @@ const int MAX_BODIES = 2048;
 
 uniform float u_initialization_radius;
 uniform float u_zoom;
+uniform float u_min_radius;
+uniform float u_max_radius;
 
 // Функция для отображения радиуса в цвет (фиолетовый-синий-зеленый-желтый-красный)
 vec3 radiusToColor(float radius) {
-    // The radius can be from 0.1 to 10. We use a logarithmic scale.
+    // The radius can be from u_min_radius to u_max_radius. We use a logarithmic scale.
     float log_radius = log(radius);
-    // Normalize log_radius from [log(0.1), log(10)] to [0, 1]
-    // log(0.1) is approx -2.3, log(10) is approx 2.3
-    float t = (log_radius + 2.302585) / 4.60517;
+    // Normalize log_radius from [log(u_min_radius), log(u_max_radius)] to [0, 1]
+    float log_min = log(u_min_radius);
+    float log_max = log(u_max_radius);
+    float t = (log_radius - log_min) / (log_max - log_min);
     t = clamp(t, 0.0, 1.0);
 
     vec3 violet = vec3(0.6, 0.2, 1.0);
