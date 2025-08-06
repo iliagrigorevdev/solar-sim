@@ -1,2 +1,2 @@
 #!/bin/bash
-python -m http.server --directory docs
+python -m http.server --directory public

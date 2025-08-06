@@ -1,3 +1,3 @@
-docs/simulation.js
-docs/simulation.wasm
-docs/simulation.data
+public/simulation.js
+public/simulation.wasm
+public/simulation.data
