@@ -4,18 +4,10 @@ precision highp float;
 
 out vec4 out_color;
 
-uniform vec2 u_resolution;
-uniform int u_num_bodies;
-uniform sampler2D u_data_texture;
-
-const float TEXTURE_WIDTH = 2048.0;
-const int MAX_BODIES = 2048;
-
-
-uniform float u_initialization_radius;
-uniform float u_zoom;
 uniform float u_min_radius;
 uniform float u_max_radius;
+
+in float v_radius;
 
 // Функция для отображения радиуса в цвет (фиолетовый-синий-зеленый-желтый-красный)
 vec3 radiusToColor(float radius) {
@@ -41,44 +33,15 @@ vec3 radiusToColor(float radius) {
     }
 }
 
-// Функция знакового расстояния для круга
-float sdCircle(vec2 p, float r) {
-    return length(p) - r;
-}
-
 void main() {
-    float resolution = min(u_resolution.x, u_resolution.y);
-    vec2 uv = (gl_FragCoord.xy * 2.0 - u_resolution.xy) / resolution;
-    uv /= u_zoom;
+    float dist = length(gl_PointCoord - vec2(0.5));
+    float edge_width = fwidth(dist);
+    float alpha = 1.0 - smoothstep(0.5 - edge_width, 0.5 + edge_width, dist);
 
-    vec3 final_color = vec3(0.0);
-    float total_alpha = 0.0;
-
-    for (int i = 0; i < MAX_BODIES; i++) {
-        if (i >= u_num_bodies) break;
-
-        vec4 data = texture(u_data_texture, vec2((float(i) + 0.5) / TEXTURE_WIDTH, 0.5));
-        vec2 body_position = data.xy;
-        float body_radius = data.z;
-
-        vec2 scaled_pos = body_position / u_initialization_radius;
-        float scaled_radius = max(body_radius / u_initialization_radius, 2.0 / (resolution * u_zoom));
-
-        float dist = sdCircle(uv - scaled_pos, scaled_radius);
-        
-        float edge_width = fwidth(dist);
-        float alpha = 1.0 - smoothstep(-edge_width, edge_width, dist);
-
-        if (alpha > 0.0) {
-            vec3 body_color = radiusToColor(body_radius);
-            final_color += body_color * alpha;
-            total_alpha += alpha;
-        }
+    if (alpha <= 0.0) {
+        discard;
     }
 
-    if (total_alpha > 0.0) {
-        final_color /= total_alpha;
-    }
-
-    out_color = vec4(final_color, min(total_alpha, 1.0));
+    vec3 color = radiusToColor(v_radius);
+    out_color = vec4(color, alpha);
 }

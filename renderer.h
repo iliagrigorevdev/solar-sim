@@ -27,15 +27,17 @@ private:
     float zoom = 1.0;
 
     GLuint shader_program;
-    GLint pos_attrib_loc;
     GLint resolution_uniform_loc;
     GLint num_bodies_uniform_loc;
-    GLuint data_texture_loc;
-    GLint data_texture_uniform_loc;
     GLint initialization_radius_uniform_loc;
     GLint zoom_uniform_loc;
     GLint min_radius_uniform_loc;
     GLint max_radius_uniform_loc;
+
+    GLuint particle_vbo;
+    GLuint particle_vao;
+    GLint body_pos_attrib_loc;
+    GLint body_radius_attrib_loc;
 
     GLuint load_shader(GLenum type, const char* source);
     GLuint create_shader_program(const char* vs_source, const char* fs_source);

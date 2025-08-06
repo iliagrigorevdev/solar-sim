@@ -44,9 +44,10 @@ bool Renderer::init(float initialization_radius) {
     }
     glUseProgram(shader_program);
 
-    pos_attrib_loc = glGetAttribLocation(shader_program, "a_position");
+    body_pos_attrib_loc = glGetAttribLocation(shader_program, "a_body_pos");
+    body_radius_attrib_loc = glGetAttribLocation(shader_program, "a_body_radius");
     resolution_uniform_loc = glGetUniformLocation(shader_program, "u_resolution");
-    data_texture_uniform_loc = glGetUniformLocation(shader_program, "u_data_texture");
+    
     num_bodies_uniform_loc = glGetUniformLocation(shader_program, "u_num_bodies");
     initialization_radius_uniform_loc = glGetUniformLocation(shader_program, "u_initialization_radius");
     zoom_uniform_loc = glGetUniformLocation(shader_program, "u_zoom");
@@ -63,12 +64,19 @@ bool Renderer::init(float initialization_radius) {
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
-    glGenTextures(1, &data_texture_loc);
-    glBindTexture(GL_TEXTURE_2D, data_texture_loc);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    glGenVertexArrays(1, &particle_vao);
+    glBindVertexArray(particle_vao);
+
+    glGenBuffers(1, &particle_vbo);
+    glBindBuffer(GL_ARRAY_BUFFER, particle_vbo);
+
+    glEnableVertexAttribArray(body_pos_attrib_loc);
+    glVertexAttribPointer(body_pos_attrib_loc, 2, GL_FLOAT, GL_FALSE, sizeof(CelestialBody), (void*)offsetof(CelestialBody, x));
+
+    glEnableVertexAttribArray(body_radius_attrib_loc);
+    glVertexAttribPointer(body_radius_attrib_loc, 1, GL_FLOAT, GL_FALSE, sizeof(CelestialBody), (void*)offsetof(CelestialBody, radius));
+
+    glBindVertexArray(0);
 
     return true;
 }
@@ -82,30 +90,13 @@ void Renderer::render(const std::vector<CelestialBody>& bodies, float min_radius
     glUniform1f(min_radius_uniform_loc, min_radius);
     glUniform1f(max_radius_uniform_loc, max_radius);
 
-    GLfloat vertices[] = {
-        -1.0f, -1.0f, 1.0f, -1.0f, -1.0f, 1.0f, 1.0f, 1.0f
-    };
-    glVertexAttribPointer(pos_attrib_loc, 2, GL_FLOAT, GL_FALSE, 0, vertices);
-    glEnableVertexAttribArray(pos_attrib_loc);
+    glBindVertexArray(particle_vao);
+    glBindBuffer(GL_ARRAY_BUFFER, particle_vbo);
+    glBufferData(GL_ARRAY_BUFFER, bodies.size() * sizeof(CelestialBody), bodies.data(), GL_DYNAMIC_DRAW);
 
-    const int num_bodies = bodies.size();
-    glUniform1i(num_bodies_uniform_loc, num_bodies);
+    glDrawArrays(GL_POINTS, 0, bodies.size());
 
-    const int texture_width = 2048;
-    std::vector<float> texture_data(texture_width * 4, 0.0f);
-
-    for (int i = 0; i < num_bodies; ++i) {
-        texture_data[i * 4 + 0] = bodies[i].x;
-        texture_data[i * 4 + 1] = bodies[i].y;
-        texture_data[i * 4 + 2] = bodies[i].radius;
-    }
-
-    glActiveTexture(GL_TEXTURE0);
-    glBindTexture(GL_TEXTURE_2D, data_texture_loc);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, texture_width, 1, 0, GL_RGBA, GL_FLOAT, texture_data.data());
-    glUniform1i(data_texture_uniform_loc, 0);
-
-    glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+    glBindVertexArray(0);
 }
 
 GLuint Renderer::load_shader(GLenum type, const char* source) {
