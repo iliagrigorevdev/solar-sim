@@ -1,6 +1,8 @@
-#version 100
+#version 300 es
 #extension GL_OES_standard_derivatives : enable
 precision highp float;
+
+out vec4 out_color;
 
 uniform vec2 u_resolution;
 uniform int u_num_bodies;
@@ -55,7 +57,7 @@ void main() {
     for (int i = 0; i < MAX_BODIES; i++) {
         if (i >= u_num_bodies) break;
 
-        vec4 data = texture2D(u_data_texture, vec2((float(i) + 0.5) / TEXTURE_WIDTH, 0.5));
+        vec4 data = texture(u_data_texture, vec2((float(i) + 0.5) / TEXTURE_WIDTH, 0.5));
         vec2 body_position = data.xy;
         float body_radius = data.z;
 
@@ -78,5 +80,5 @@ void main() {
         final_color /= total_alpha;
     }
 
-    gl_FragColor = vec4(final_color, min(total_alpha, 1.0));
+    out_color = vec4(final_color, min(total_alpha, 1.0));
 }

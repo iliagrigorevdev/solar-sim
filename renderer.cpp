@@ -1,4 +1,4 @@
-#include <GLES2/gl2.h>
+#include <GLES3/gl3.h>
 #include "renderer.h"
 #include <iostream>
 #include <fstream>
@@ -25,7 +25,7 @@ bool Renderer::init(float initialization_radius) {
     
     EmscriptenWebGLContextAttributes attrs;
     emscripten_webgl_init_context_attributes(&attrs);
-    attrs.majorVersion = 1;
+    attrs.majorVersion = 2;
     attrs.minorVersion = 0;
 
     EMSCRIPTEN_WEBGL_CONTEXT_HANDLE context = emscripten_webgl_create_context("#canvas", &attrs);
@@ -102,7 +102,7 @@ void Renderer::render(const std::vector<CelestialBody>& bodies, float min_radius
 
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, data_texture_loc);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, texture_width, 1, 0, GL_RGBA, GL_FLOAT, texture_data.data());
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, texture_width, 1, 0, GL_RGBA, GL_FLOAT, texture_data.data());
     glUniform1i(data_texture_uniform_loc, 0);
 
     glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
