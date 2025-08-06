@@ -50,6 +50,8 @@ bool Renderer::init(float initialization_radius) {
     num_bodies_uniform_loc = glGetUniformLocation(shader_program, "u_num_bodies");
     initialization_radius_uniform_loc = glGetUniformLocation(shader_program, "u_initialization_radius");
     zoom_uniform_loc = glGetUniformLocation(shader_program, "u_zoom");
+    min_radius_uniform_loc = glGetUniformLocation(shader_program, "u_min_radius");
+    max_radius_uniform_loc = glGetUniformLocation(shader_program, "u_max_radius");
 
     emscripten_set_touchstart_callback("#canvas", this, true, touchstart_callback);
     emscripten_set_touchmove_callback("#canvas", this, true, touchmove_callback);
@@ -71,12 +73,14 @@ bool Renderer::init(float initialization_radius) {
     return true;
 }
 
-void Renderer::render(const std::vector<CelestialBody>& bodies) {
+void Renderer::render(const std::vector<CelestialBody>& bodies, float min_radius, float max_radius) {
     glClear(GL_COLOR_BUFFER_BIT);
 
     glUniform1f(initialization_radius_uniform_loc, initialization_radius);
     glUniform2f(resolution_uniform_loc, screen_width, screen_height);
     glUniform1f(zoom_uniform_loc, zoom);
+    glUniform1f(min_radius_uniform_loc, min_radius);
+    glUniform1f(max_radius_uniform_loc, max_radius);
 
     GLfloat vertices[] = {
         -1.0f, -1.0f, 1.0f, -1.0f, -1.0f, 1.0f, 1.0f, 1.0f

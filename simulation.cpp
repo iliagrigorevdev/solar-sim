@@ -178,7 +178,9 @@ void main_loop(void* arg) {
     for (int i = 0; i < g_simulation_speed; ++i) {
         update_simulation(*context->bodies, **context->quadtree, *context->params);
     }
-    context->renderer->render(*context->bodies);
+    float min_radius = std::cbrt(std::min(context->params->MIN_MASS, context->params->CENTRAL_BODY_MASS) / context->params->DENSITY);
+    float max_radius = std::cbrt(std::max(context->params->MAX_MASS, context->params->CENTRAL_BODY_MASS) / context->params->DENSITY);
+    context->renderer->render(*context->bodies, min_radius, max_radius);
 }
 #endif
 

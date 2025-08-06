@@ -13,7 +13,7 @@ public:
     ~Renderer();
 
     bool init(float initialization_radius);
-    void render(const std::vector<CelestialBody>& bodies);
+    void render(const std::vector<CelestialBody>& bodies, float min_radius, float max_radius);
     void handle_resize(int width, int height);
     void handle_touchstart(const EmscriptenTouchEvent *touchEvent);
     void handle_touchmove(const EmscriptenTouchEvent *touchEvent);
@@ -34,6 +34,8 @@ private:
     GLint data_texture_uniform_loc;
     GLint initialization_radius_uniform_loc;
     GLint zoom_uniform_loc;
+    GLint min_radius_uniform_loc;
+    GLint max_radius_uniform_loc;
 
     GLuint load_shader(GLenum type, const char* source);
     GLuint create_shader_program(const char* vs_source, const char* fs_source);
