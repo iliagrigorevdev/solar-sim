@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Solar System Simulation</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <canvas id="canvas"></canvas>
+
+    <div id="settings-btn" title="Settings">⚙️</div>
+
+    <div id="settings-panel" class="hidden">
+        <h3>Simulation Settings</h3>
+        <div class="settings-row">
+            <label>Simulation Speed</label>
+            <div class="speed-control">
+                <button type="button" id="decrease-speed-btn">-</button>
+                <span id="simulation-speed">1</span>
+                <button type="button" id="increase-speed-btn">+</button>
+            </div>
+        </div>
+        <div class="divider"></div>
+        <form id="settings-form" onsubmit="return false;">
+            <div>
+                <label for="G">Gravitational Constant (G)</label>
+                <input type="number" id="G" name="G" step="any">
+            </div>
+            <div>
+                <label for="DENSITY">Density</label>
+                <input type="number" id="DENSITY" name="DENSITY" step="any">
+            </div>
+            <div>
+                <label for="NUM_BODIES">Number of Bodies</label>
+                <input type="number" id="NUM_BODIES" name="NUM_BODIES" step="1">
+            </div>
+            <div>
+                <label for="INITIALIZATION_RADIUS">Initialization Radius</label>
+                <input type="number" id="INITIALIZATION_RADIUS" name="INITIALIZATION_RADIUS" step="any">
+            </div>
+            <div>
+                <label for="DT">Time Step (DT)</label>
+                <input type="number" id="DT" name="DT" step="any">
+            </div>
+            <div>
+                <label for="SOFTENING_FACTOR">Softening Factor</label>
+                <input type="number" id="SOFTENING_FACTOR" name="SOFTENING_FACTOR" step="any">
+            </div>
+            <div>
+                <label for="MAX_MASS">Max Mass</label>
+                <input type="number" id="MAX_MASS" name="MAX_MASS" step="any">
+            </div>
+            <div>
+                <label for="MIN_MASS">Min Mass</label>
+                <input type="number" id="MIN_MASS" name="MIN_MASS" step="any">
+            </div>
+            <div>
+                <label for="CENTRAL_BODY_MASS">Central Body Mass</label>
+                <input type="number" id="CENTRAL_BODY_MASS" name="CENTRAL_BODY_MASS" step="any">
+            </div>
+        </form>
+        <div class="buttons">
+            <button type="button" id="save-settings-btn">Apply & Reset</button>
+            <button type="button" id="close-settings-btn">Close</button>
+        </div>
+    </div>
+
+    <script type='text/javascript'>
+        const settingsBtn = document.getElementById('settings-btn');
+        const settingsPanel = document.getElementById('settings-panel');
+        const closeBtn = document.getElementById('close-settings-btn');
+        const saveBtn = document.getElementById('save-settings-btn');
+        const form = document.getElementById('settings-form');
+        const decreaseSpeedBtn = document.getElementById('decrease-speed-btn');
+        const increaseSpeedBtn = document.getElementById('increase-speed-btn');
+        const simulationSpeedEl = document.getElementById('simulation-speed');
+        let wasmReady = false;
+
+        function updateSimulationSpeed() {
+            if (!wasmReady) return;
+            simulationSpeedEl.textContent = Module.getSimulationSpeed();
+        }
+
+        decreaseSpeedBtn.addEventListener('click', () => {
+            if (!wasmReady) return;
+            Module.decreaseSimulationSpeed();
+            updateSimulationSpeed();
+        });
+
+        increaseSpeedBtn.addEventListener('click', () => {
+            if (!wasmReady) return;
+            Module.increaseSimulationSpeed();
+            updateSimulationSpeed();
+        });
+
+        function populateSettingsForm() {
+            if (!wasmReady) return;
+            updateSimulationSpeed();
+            const params = Module.getSimulationParameters();
+            const keys = ["G", "DENSITY", "NUM_BODIES", "INITIALIZATION_RADIUS", "DT", "SOFTENING_FACTOR", "MAX_MASS", "MIN_MASS", "CENTRAL_BODY_MASS"];
+            for (const key of keys) {
+                if (form.elements[key] && params.hasOwnProperty(key)) {
+                    const value = params[key];
+                    if (form.elements[key].step === 'any') { // Check if it's a float input
+                        form.elements[key].value = parseFloat(value.toPrecision(7));
+                    } else {
+                        form.elements[key].value = value;
+                    }
+                }
+            }
+        }
+
+        function applySettings() {
+            if (!wasmReady) return;
+            const newParams = {};
+            const formData = new FormData(form);
+            for (const [key, value] of formData.entries()) {
+                newParams[key] = Number(value) || 0;
+            }
+            Module.setSimulationParameters(newParams);
+            console.log("Settings applied and simulation reset.");
+            settingsPanel.classList.add('hidden');
+        }
+
+        settingsBtn.addEventListener('click', () => {
+            populateSettingsForm();
+            settingsPanel.classList.toggle('hidden');
+        });
+
+        closeBtn.addEventListener('click', () => {
+            settingsPanel.classList.add('hidden');
+        });
+
+        saveBtn.addEventListener('click', applySettings);
+
+        var Module = {
+            canvas: (function() { return document.getElementById('canvas'); })(),
+            onRuntimeInitialized: function() {
+                console.log('WASM Runtime Initialized.');
+                wasmReady = true;
+                saveBtn.disabled = false;
+                populateSettingsForm();
+            }
+        };
+        
+        saveBtn.disabled = true;
+
+    </script>
+    <script src="simulation.js"></script>
+</body>
+</html>
