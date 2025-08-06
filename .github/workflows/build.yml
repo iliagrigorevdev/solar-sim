@@ -1,0 +1,21 @@
+name: Build Project
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+    - name: Set up Emscripten
+      uses: mymindstorm/setup-emsdk@v11
+      with:
+        version: 3.1.35
+    - name: Build
+      run: |
+        chmod +x build.sh
+        ./build.sh
