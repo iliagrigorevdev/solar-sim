@@ -1,232 +1,255 @@
-#include <GLES3/gl3.h>
 #include "renderer.h"
-#include <iostream>
+
+#include <GLES3/gl3.h>
+
 #include <fstream>
+#include <iostream>
 #include <sstream>
 
-Renderer::Renderer(int width, int height) : screen_width(width), screen_height(height) {}
+Renderer::Renderer(int width, int height)
+    : screen_width(width), screen_height(height) {}
 
-Renderer::~Renderer() {
-}
+Renderer::~Renderer() {}
 
-std::string Renderer::read_file(const std::string& path) {
-    std::ifstream file(path);
-    std::stringstream buffer;
-    if (file) {
-        buffer << file.rdbuf();
-        return buffer.str();
-    }
-    std::cerr << "Error: Could not open file " << path << std::endl;
-    return "";
+std::string Renderer::read_file(const std::string &path) {
+  std::ifstream file(path);
+  std::stringstream buffer;
+  if (file) {
+    buffer << file.rdbuf();
+    return buffer.str();
+  }
+  std::cerr << "Error: Could not open file " << path << std::endl;
+  return "";
 }
 
 bool Renderer::init(float initialization_radius) {
-    this->initialization_radius = initialization_radius;
-    
-    EmscriptenWebGLContextAttributes attrs;
-    emscripten_webgl_init_context_attributes(&attrs);
-    attrs.majorVersion = 2;
-    attrs.minorVersion = 0;
+  this->initialization_radius = initialization_radius;
 
-    EMSCRIPTEN_WEBGL_CONTEXT_HANDLE context = emscripten_webgl_create_context("#canvas", &attrs);
-    if (context <= 0) {
-        std::cerr << "Could not create WebGL context" << std::endl;
-        return false;
-    }
-    emscripten_webgl_make_context_current(context);
+  EmscriptenWebGLContextAttributes attrs;
+  emscripten_webgl_init_context_attributes(&attrs);
+  attrs.majorVersion = 2;
+  attrs.minorVersion = 0;
 
-    std::string vs_source = read_file("shader.vert");
-    std::string fs_source = read_file("shader.frag");
+  EMSCRIPTEN_WEBGL_CONTEXT_HANDLE context =
+      emscripten_webgl_create_context("#canvas", &attrs);
+  if (context <= 0) {
+    std::cerr << "Could not create WebGL context" << std::endl;
+    return false;
+  }
+  emscripten_webgl_make_context_current(context);
 
-    shader_program = create_shader_program(vs_source.c_str(), fs_source.c_str());
-    if (!shader_program) {
-        return false;
-    }
-    glUseProgram(shader_program);
+  std::string vs_source = read_file("shader.vert");
+  std::string fs_source = read_file("shader.frag");
 
-    body_pos_attrib_loc = glGetAttribLocation(shader_program, "a_body_pos");
-    body_radius_attrib_loc = glGetAttribLocation(shader_program, "a_body_radius");
-    resolution_uniform_loc = glGetUniformLocation(shader_program, "u_resolution");
-    
-    num_bodies_uniform_loc = glGetUniformLocation(shader_program, "u_num_bodies");
-    initialization_radius_uniform_loc = glGetUniformLocation(shader_program, "u_initialization_radius");
-    zoom_uniform_loc = glGetUniformLocation(shader_program, "u_zoom");
-    min_radius_uniform_loc = glGetUniformLocation(shader_program, "u_min_radius");
-    max_radius_uniform_loc = glGetUniformLocation(shader_program, "u_max_radius");
-    num_colors_uniform_loc = glGetUniformLocation(shader_program, "u_num_colors");
-    colors_uniform_loc = glGetUniformLocation(shader_program, "u_colors");
-    weights_uniform_loc = glGetUniformLocation(shader_program, "u_weights");
+  shader_program = create_shader_program(vs_source.c_str(), fs_source.c_str());
+  if (!shader_program) {
+    return false;
+  }
+  glUseProgram(shader_program);
 
-    emscripten_set_touchstart_callback("#canvas", this, true, touchstart_callback);
-    emscripten_set_touchmove_callback("#canvas", this, true, touchmove_callback);
-    emscripten_set_touchend_callback("#canvas", this, true, touchend_callback);
+  body_pos_attrib_loc = glGetAttribLocation(shader_program, "a_body_pos");
+  body_radius_attrib_loc = glGetAttribLocation(shader_program, "a_body_radius");
+  resolution_uniform_loc = glGetUniformLocation(shader_program, "u_resolution");
 
-    glViewport(0, 0, screen_width, screen_height);
-    glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
-    // Включаем блендинг для корректного наложения объектов
-    glEnable(GL_BLEND);
-    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+  num_bodies_uniform_loc = glGetUniformLocation(shader_program, "u_num_bodies");
+  initialization_radius_uniform_loc =
+      glGetUniformLocation(shader_program, "u_initialization_radius");
+  zoom_uniform_loc = glGetUniformLocation(shader_program, "u_zoom");
+  min_radius_uniform_loc = glGetUniformLocation(shader_program, "u_min_radius");
+  max_radius_uniform_loc = glGetUniformLocation(shader_program, "u_max_radius");
+  num_colors_uniform_loc = glGetUniformLocation(shader_program, "u_num_colors");
+  colors_uniform_loc = glGetUniformLocation(shader_program, "u_colors");
+  weights_uniform_loc = glGetUniformLocation(shader_program, "u_weights");
 
-    glGenVertexArrays(1, &particle_vao);
-    glBindVertexArray(particle_vao);
+  emscripten_set_touchstart_callback("#canvas", this, true,
+                                     touchstart_callback);
+  emscripten_set_touchmove_callback("#canvas", this, true, touchmove_callback);
+  emscripten_set_touchend_callback("#canvas", this, true, touchend_callback);
 
-    glGenBuffers(1, &particle_vbo);
-    glBindBuffer(GL_ARRAY_BUFFER, particle_vbo);
+  glViewport(0, 0, screen_width, screen_height);
+  glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+  // Включаем блендинг для корректного наложения объектов
+  glEnable(GL_BLEND);
+  glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
-    glEnableVertexAttribArray(body_pos_attrib_loc);
-    glVertexAttribPointer(body_pos_attrib_loc, 2, GL_FLOAT, GL_FALSE, sizeof(CelestialBody), (void*)offsetof(CelestialBody, x));
+  glGenVertexArrays(1, &particle_vao);
+  glBindVertexArray(particle_vao);
 
-    glEnableVertexAttribArray(body_radius_attrib_loc);
-    glVertexAttribPointer(body_radius_attrib_loc, 1, GL_FLOAT, GL_FALSE, sizeof(CelestialBody), (void*)offsetof(CelestialBody, radius));
+  glGenBuffers(1, &particle_vbo);
+  glBindBuffer(GL_ARRAY_BUFFER, particle_vbo);
 
-    glBindVertexArray(0);
+  glEnableVertexAttribArray(body_pos_attrib_loc);
+  glVertexAttribPointer(body_pos_attrib_loc, 2, GL_FLOAT, GL_FALSE,
+                        sizeof(CelestialBody),
+                        (void *)offsetof(CelestialBody, x));
 
-    return true;
+  glEnableVertexAttribArray(body_radius_attrib_loc);
+  glVertexAttribPointer(body_radius_attrib_loc, 1, GL_FLOAT, GL_FALSE,
+                        sizeof(CelestialBody),
+                        (void *)offsetof(CelestialBody, radius));
+
+  glBindVertexArray(0);
+
+  return true;
 }
 
-void Renderer::render(const std::vector<CelestialBody>& bodies, float min_radius, float max_radius) {
-    glClear(GL_COLOR_BUFFER_BIT);
+void Renderer::render(const std::vector<CelestialBody> &bodies,
+                      float min_radius, float max_radius) {
+  glClear(GL_COLOR_BUFFER_BIT);
 
-    glUniform1f(initialization_radius_uniform_loc, initialization_radius);
-    glUniform2f(resolution_uniform_loc, screen_width, screen_height);
-    glUniform1f(zoom_uniform_loc, zoom);
-    glUniform1f(min_radius_uniform_loc, min_radius);
-    glUniform1f(max_radius_uniform_loc, max_radius);
+  glUniform1f(initialization_radius_uniform_loc, initialization_radius);
+  glUniform2f(resolution_uniform_loc, screen_width, screen_height);
+  glUniform1f(zoom_uniform_loc, zoom);
+  glUniform1f(min_radius_uniform_loc, min_radius);
+  glUniform1f(max_radius_uniform_loc, max_radius);
 
-    glUniform1i(num_colors_uniform_loc, colors.size());
-    glUniform3fv(colors_uniform_loc, colors.size(), (GLfloat*)colors.data());
-    glUniform1fv(weights_uniform_loc, weights.size(), weights.data());
+  glUniform1i(num_colors_uniform_loc, colors.size());
+  glUniform3fv(colors_uniform_loc, colors.size(), (GLfloat *)colors.data());
+  glUniform1fv(weights_uniform_loc, weights.size(), weights.data());
 
-    glBindVertexArray(particle_vao);
-    glBindBuffer(GL_ARRAY_BUFFER, particle_vbo);
-    glBufferData(GL_ARRAY_BUFFER, bodies.size() * sizeof(CelestialBody), bodies.data(), GL_DYNAMIC_DRAW);
+  glBindVertexArray(particle_vao);
+  glBindBuffer(GL_ARRAY_BUFFER, particle_vbo);
+  glBufferData(GL_ARRAY_BUFFER, bodies.size() * sizeof(CelestialBody),
+               bodies.data(), GL_DYNAMIC_DRAW);
 
-    glDrawArrays(GL_POINTS, 0, bodies.size());
+  glDrawArrays(GL_POINTS, 0, bodies.size());
 
-    glBindVertexArray(0);
+  glBindVertexArray(0);
 }
 
-void Renderer::set_colors(const std::vector<float>& color_data, const std::vector<float>& weight_data) {
-    colors.clear();
-    weights.clear();
+void Renderer::set_colors(const std::vector<float> &color_data,
+                          const std::vector<float> &weight_data) {
+  colors.clear();
+  weights.clear();
 
-    for (size_t i = 0; i < color_data.size(); i += 3) {
-        colors.push_back({color_data[i], color_data[i+1], color_data[i+2]});
-    }
-    weights = weight_data;
+  for (size_t i = 0; i < color_data.size(); i += 3) {
+    colors.push_back({color_data[i], color_data[i + 1], color_data[i + 2]});
+  }
+  weights = weight_data;
 }
 
-GLuint Renderer::load_shader(GLenum type, const char* source) {
-    GLuint shader = glCreateShader(type);
-    glShaderSource(shader, 1, &source, NULL);
-    glCompileShader(shader);
-    GLint compiled;
-    glGetShaderiv(shader, GL_COMPILE_STATUS, &compiled);
-    if (!compiled) {
-        GLint info_len = 0;
-        glGetShaderiv(shader, GL_INFO_LOG_LENGTH, &info_len);
-        if (info_len > 1) {
-            char* info_log = (char*)malloc(sizeof(char) * info_len);
-            glGetShaderInfoLog(shader, info_len, NULL, info_log);
-            std::cerr << "Error compiling shader:\n" << info_log << std::endl;
-            free(info_log);
-        }
-        glDeleteShader(shader);
-        return 0;
+GLuint Renderer::load_shader(GLenum type, const char *source) {
+  GLuint shader = glCreateShader(type);
+  glShaderSource(shader, 1, &source, NULL);
+  glCompileShader(shader);
+  GLint compiled;
+  glGetShaderiv(shader, GL_COMPILE_STATUS, &compiled);
+  if (!compiled) {
+    GLint info_len = 0;
+    glGetShaderiv(shader, GL_INFO_LOG_LENGTH, &info_len);
+    if (info_len > 1) {
+      char *info_log = (char *)malloc(sizeof(char) * info_len);
+      glGetShaderInfoLog(shader, info_len, NULL, info_log);
+      std::cerr << "Error compiling shader:\n" << info_log << std::endl;
+      free(info_log);
     }
-    return shader;
+    glDeleteShader(shader);
+    return 0;
+  }
+  return shader;
 }
 
-GLuint Renderer::create_shader_program(const char* vs_source, const char* fs_source) {
-    GLuint vs = load_shader(GL_VERTEX_SHADER, vs_source);
-    GLuint fs = load_shader(GL_FRAGMENT_SHADER, fs_source);
+GLuint Renderer::create_shader_program(const char *vs_source,
+                                       const char *fs_source) {
+  GLuint vs = load_shader(GL_VERTEX_SHADER, vs_source);
+  GLuint fs = load_shader(GL_FRAGMENT_SHADER, fs_source);
 
-    if (vs == 0 || fs == 0) return 0;
+  if (vs == 0 || fs == 0) return 0;
 
-    GLuint program = glCreateProgram();
-    glAttachShader(program, vs);
-    glAttachShader(program, fs);
-    glLinkProgram(program);
+  GLuint program = glCreateProgram();
+  glAttachShader(program, vs);
+  glAttachShader(program, fs);
+  glLinkProgram(program);
 
-    GLint linked;
-    glGetProgramiv(program, GL_LINK_STATUS, &linked);
-    if (!linked) {
-        GLint info_len = 0;
-        glGetProgramiv(program, GL_INFO_LOG_LENGTH, &info_len);
-        if (info_len > 1) {
-            char* info_log = (char*)malloc(sizeof(char) * info_len);
-            glGetProgramInfoLog(program, info_len, NULL, info_log);
-            std::cerr << "Error linking program:\n" << info_log << std::endl;
-            free(info_log);
-        }
-        glDeleteProgram(program);
-        return 0;
+  GLint linked;
+  glGetProgramiv(program, GL_LINK_STATUS, &linked);
+  if (!linked) {
+    GLint info_len = 0;
+    glGetProgramiv(program, GL_INFO_LOG_LENGTH, &info_len);
+    if (info_len > 1) {
+      char *info_log = (char *)malloc(sizeof(char) * info_len);
+      glGetProgramInfoLog(program, info_len, NULL, info_log);
+      std::cerr << "Error linking program:\n" << info_log << std::endl;
+      free(info_log);
     }
+    glDeleteProgram(program);
+    return 0;
+  }
 
-    glDeleteShader(vs);
-    glDeleteShader(fs);
+  glDeleteShader(vs);
+  glDeleteShader(fs);
 
-    return program;
+  return program;
 }
 
 void Renderer::handle_resize(int width, int height) {
-    //std::cout << "Handling resize to: " << width << "x" << height << std::endl;
-    screen_width = width;
-    screen_height = height;
-    glViewport(0, 0, screen_width, screen_height);
+  // std::cout << "Handling resize to: " << width << "x" << height << std::endl;
+  screen_width = width;
+  screen_height = height;
+  glViewport(0, 0, screen_width, screen_height);
 }
 
-EM_BOOL Renderer::touchstart_callback(int eventType, const EmscriptenTouchEvent *touchEvent, void *userData) {
-    Renderer* renderer = static_cast<Renderer*>(userData);
-    if (renderer) {
-        renderer->handle_touchstart(touchEvent);
-    }
-    if (touchEvent->numTouches >= 2) {
-        return EM_FALSE;
-    }
-    return EM_TRUE;
+EM_BOOL Renderer::touchstart_callback(int eventType,
+                                      const EmscriptenTouchEvent *touchEvent,
+                                      void *userData) {
+  Renderer *renderer = static_cast<Renderer *>(userData);
+  if (renderer) {
+    renderer->handle_touchstart(touchEvent);
+  }
+  if (touchEvent->numTouches >= 2) {
+    return EM_FALSE;
+  }
+  return EM_TRUE;
 }
 
-EM_BOOL Renderer::touchmove_callback(int eventType, const EmscriptenTouchEvent *touchEvent, void *userData) {
-    Renderer* renderer = static_cast<Renderer*>(userData);
-    if (renderer) {
-        renderer->handle_touchmove(touchEvent);
-    }
-    if (touchEvent->numTouches >= 2) {
-        return EM_FALSE;
-    }
-    return EM_TRUE;
+EM_BOOL Renderer::touchmove_callback(int eventType,
+                                     const EmscriptenTouchEvent *touchEvent,
+                                     void *userData) {
+  Renderer *renderer = static_cast<Renderer *>(userData);
+  if (renderer) {
+    renderer->handle_touchmove(touchEvent);
+  }
+  if (touchEvent->numTouches >= 2) {
+    return EM_FALSE;
+  }
+  return EM_TRUE;
 }
 
-EM_BOOL Renderer::touchend_callback(int eventType, const EmscriptenTouchEvent *touchEvent, void *userData) {
-    Renderer* renderer = static_cast<Renderer*>(userData);
-    if (renderer) {
-        renderer->handle_touchend(touchEvent);
-    }
-    if (touchEvent->numTouches >= 2) {
-        return EM_FALSE;
-    }
-    return EM_TRUE;
+EM_BOOL Renderer::touchend_callback(int eventType,
+                                    const EmscriptenTouchEvent *touchEvent,
+                                    void *userData) {
+  Renderer *renderer = static_cast<Renderer *>(userData);
+  if (renderer) {
+    renderer->handle_touchend(touchEvent);
+  }
+  if (touchEvent->numTouches >= 2) {
+    return EM_FALSE;
+  }
+  return EM_TRUE;
 }
 
 void Renderer::handle_touchstart(const EmscriptenTouchEvent *touchEvent) {
-    if (touchEvent->numTouches >= 2) {
-        const EmscriptenTouchPoint *t1 = &touchEvent->touches[0];
-        const EmscriptenTouchPoint *t2 = &touchEvent->touches[1];
-        initial_touch_dist = std::sqrt(std::pow(t1->clientX - t2->clientX, 2) + std::pow(t1->clientY - t2->clientY, 2));
-    }
+  if (touchEvent->numTouches >= 2) {
+    const EmscriptenTouchPoint *t1 = &touchEvent->touches[0];
+    const EmscriptenTouchPoint *t2 = &touchEvent->touches[1];
+    initial_touch_dist = std::sqrt(std::pow(t1->clientX - t2->clientX, 2) +
+                                   std::pow(t1->clientY - t2->clientY, 2));
+  }
 }
 
 void Renderer::handle_touchmove(const EmscriptenTouchEvent *touchEvent) {
-    if (touchEvent->numTouches >= 2) {
-        const EmscriptenTouchPoint *t1 = &touchEvent->touches[0];
-        const EmscriptenTouchPoint *t2 = &touchEvent->touches[1];
-        double current_touch_dist = std::sqrt(std::pow(t1->clientX - t2->clientX, 2) + std::pow(t1->clientY - t2->clientY, 2));
-        zoom *= 1.0 + (current_touch_dist - initial_touch_dist) / initial_touch_dist;
-        initial_touch_dist = current_touch_dist;
-    }
+  if (touchEvent->numTouches >= 2) {
+    const EmscriptenTouchPoint *t1 = &touchEvent->touches[0];
+    const EmscriptenTouchPoint *t2 = &touchEvent->touches[1];
+    double current_touch_dist =
+        std::sqrt(std::pow(t1->clientX - t2->clientX, 2) +
+                  std::pow(t1->clientY - t2->clientY, 2));
+    zoom *=
+        1.0 + (current_touch_dist - initial_touch_dist) / initial_touch_dist;
+    initial_touch_dist = current_touch_dist;
+  }
 }
 
 void Renderer::handle_touchend(const EmscriptenTouchEvent *touchEvent) {
-    initial_touch_dist = 0;
+  initial_touch_dist = 0;
 }
