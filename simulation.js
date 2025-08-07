@@ -189,7 +189,7 @@ var REMOTE_PACKAGE_SIZE = metadata['remote_package_size'];
     }
 
     }
-    loadPackage({"files": [{"filename": "/shader.frag", "start": 0, "end": 1421}, {"filename": "/shader.vert", "start": 1421, "end": 2100}], "remote_package_size": 2100});
+    loadPackage({"files": [{"filename": "/shader.frag", "start": 0, "end": 1715}, {"filename": "/shader.vert", "start": 1715, "end": 2394}], "remote_package_size": 2394});
 
   })();
 
@@ -5062,6 +5062,104 @@ function dbg(text) {
       return nowIsMonotonic;
     }
 
+  
+  
+  
+  function requireRegisteredType(rawType, humanName) {
+      var impl = registeredTypes[rawType];
+      if (undefined === impl) {
+          throwBindingError(humanName + " has unknown type " + getTypeName(rawType));
+      }
+      return impl;
+    }
+  function __emval_as(handle, returnType, destructorsRef) {
+      handle = Emval.toValue(handle);
+      returnType = requireRegisteredType(returnType, 'emval::as');
+      var destructors = [];
+      var rd = Emval.toHandle(destructors);
+      HEAPU32[((destructorsRef)>>2)] = rd;
+      return returnType['toWireType'](destructors, handle);
+    }
+
+  function emval_lookupTypes(argCount, argTypes) {
+      var a = new Array(argCount);
+      for (var i = 0; i < argCount; ++i) {
+        a[i] = requireRegisteredType(HEAPU32[(((argTypes)+(i * 4))>>2)],
+                                     "parameter " + i);
+      }
+      return a;
+    }
+  
+  function __emval_call(handle, argCount, argTypes, argv) {
+      handle = Emval.toValue(handle);
+      var types = emval_lookupTypes(argCount, argTypes);
+  
+      var args = new Array(argCount);
+      for (var i = 0; i < argCount; ++i) {
+        var type = types[i];
+        args[i] = type['readValueFromPointer'](argv);
+        argv += type['argPackAdvance'];
+      }
+  
+      var rv = handle.apply(undefined, args);
+      return Emval.toHandle(rv);
+    }
+
+
+  
+  var emval_symbols = {};
+  
+  function getStringOrSymbol(address) {
+      var symbol = emval_symbols[address];
+      if (symbol === undefined) {
+        return readLatin1String(address);
+      }
+      return symbol;
+    }
+  
+  function emval_get_global() {
+      if (typeof globalThis == 'object') {
+        return globalThis;
+      }
+      return (function(){
+        return Function;
+      })()('return this')();
+    }
+  function __emval_get_global(name) {
+      if (name===0) {
+        return Emval.toHandle(emval_get_global());
+      } else {
+        name = getStringOrSymbol(name);
+        return Emval.toHandle(emval_get_global()[name]);
+      }
+    }
+
+  function __emval_get_property(handle, key) {
+      handle = Emval.toValue(handle);
+      key = Emval.toValue(key);
+      return Emval.toHandle(handle[key]);
+    }
+
+  
+  function __emval_new_cstring(v) {
+      return Emval.toHandle(getStringOrSymbol(v));
+    }
+
+  
+  
+  function __emval_run_destructors(handle) {
+      var destructors = Emval.toValue(handle);
+      runDestructors(destructors);
+      __emval_decref(handle);
+    }
+
+  
+  function __emval_take_value(type, arg) {
+      type = requireRegisteredType(type, '_emval_take_value');
+      var v = type['readValueFromPointer'](arg);
+      return Emval.toHandle(v);
+    }
+
   function _abort() {
       abort('native code called abort()');
     }
@@ -7131,8 +7229,60 @@ function dbg(text) {
     }
 
   
+  var miniTempWebGLFloatBuffers = [];
+  
+  function _glUniform1fv(location, count, value) {
+  
+      if (GL.currentContext.version >= 2) { // WebGL 2 provides new garbage-free entry points to call to WebGL. Use those always when possible.
+        count && GLctx.uniform1fv(webglGetUniformLocation(location), HEAPF32, value>>2, count);
+        return;
+      }
+  
+      if (count <= 288) {
+        // avoid allocation when uploading few enough uniforms
+        var view = miniTempWebGLFloatBuffers[count-1];
+        for (var i = 0; i < count; ++i) {
+          view[i] = HEAPF32[(((value)+(4*i))>>2)];
+        }
+      } else
+      {
+        var view = HEAPF32.subarray((value)>>2, (value+count*4)>>2);
+      }
+      GLctx.uniform1fv(webglGetUniformLocation(location), view);
+    }
+
+  
+  function _glUniform1i(location, v0) {
+      GLctx.uniform1i(webglGetUniformLocation(location), v0);
+    }
+
+  
   function _glUniform2f(location, v0, v1) {
       GLctx.uniform2f(webglGetUniformLocation(location), v0, v1);
+    }
+
+  
+  
+  function _glUniform3fv(location, count, value) {
+  
+      if (GL.currentContext.version >= 2) { // WebGL 2 provides new garbage-free entry points to call to WebGL. Use those always when possible.
+        count && GLctx.uniform3fv(webglGetUniformLocation(location), HEAPF32, value>>2, count*3);
+        return;
+      }
+  
+      if (count <= 96) {
+        // avoid allocation when uploading few enough uniforms
+        var view = miniTempWebGLFloatBuffers[3*count-1];
+        for (var i = 0; i < 3*count; i += 3) {
+          view[i] = HEAPF32[(((value)+(4*i))>>2)];
+          view[i+1] = HEAPF32[(((value)+(4*i+4))>>2)];
+          view[i+2] = HEAPF32[(((value)+(4*i+8))>>2)];
+        }
+      } else
+      {
+        var view = HEAPF32.subarray((value)>>2, (value+count*12)>>2);
+      }
+      GLctx.uniform3fv(webglGetUniformLocation(location), view);
     }
 
   function _glUseProgram(program) {
@@ -7701,6 +7851,11 @@ UnboundTypeError = Module['UnboundTypeError'] = extendError(Error, 'UnboundTypeE
       var preloadedImages = {};
       var preloadedAudios = {};;
 var GLctx;;
+var miniTempWebGLFloatBuffersStorage = new Float32Array(288);
+  for (/**@suppress{duplicate}*/var i = 0; i < 288; ++i) {
+  miniTempWebGLFloatBuffers[i] = miniTempWebGLFloatBuffersStorage.subarray(0, i+1);
+  }
+  ;
 // include: base64Utils.js
 // Copied from https://github.com/strophe/strophejs/blob/e06d027/src/polyfills.js#L149
 
@@ -7797,6 +7952,14 @@ var wasmImports = {
   "_embind_register_value_object_field": __embind_register_value_object_field,
   "_embind_register_void": __embind_register_void,
   "_emscripten_get_now_is_monotonic": __emscripten_get_now_is_monotonic,
+  "_emval_as": __emval_as,
+  "_emval_call": __emval_call,
+  "_emval_decref": __emval_decref,
+  "_emval_get_global": __emval_get_global,
+  "_emval_get_property": __emval_get_property,
+  "_emval_new_cstring": __emval_new_cstring,
+  "_emval_run_destructors": __emval_run_destructors,
+  "_emval_take_value": __emval_take_value,
   "abort": _abort,
   "emscripten_date_now": _emscripten_date_now,
   "emscripten_get_canvas_element_size": _emscripten_get_canvas_element_size,
@@ -7845,7 +8008,10 @@ var wasmImports = {
   "glLinkProgram": _glLinkProgram,
   "glShaderSource": _glShaderSource,
   "glUniform1f": _glUniform1f,
+  "glUniform1fv": _glUniform1fv,
+  "glUniform1i": _glUniform1i,
   "glUniform2f": _glUniform2f,
+  "glUniform3fv": _glUniform3fv,
   "glUseProgram": _glUseProgram,
   "glVertexAttribPointer": _glVertexAttribPointer,
   "glViewport": _glViewport,
@@ -8063,7 +8229,6 @@ var missingLibrarySymbols = [
   'getInheritedInstance',
   'getInheritedInstanceCount',
   'getLiveInheritedInstances',
-  'requireRegisteredType',
   'enumReadValueFromPointer',
   'genericPointerToWireType',
   'constNoSmartPtrRawPointerToWireType',
@@ -8094,10 +8259,7 @@ var missingLibrarySymbols = [
   'downcastPointer',
   'upcastPointer',
   'validateThis',
-  'getStringOrSymbol',
   'craftEmvalAllocator',
-  'emval_get_global',
-  'emval_lookupTypes',
   'emval_allocateDestructors',
   'emval_addMethodCaller',
 ];
@@ -8268,6 +8430,7 @@ var unexportedSymbols = [
   'readLatin1String',
   'getTypeName',
   'heap32VectorToArray',
+  'requireRegisteredType',
   'getShiftFromSize',
   'integerReadValueFromPointer',
   'floatReadValueFromPointer',
@@ -8289,8 +8452,11 @@ var unexportedSymbols = [
   'emval_symbols',
   'init_emval',
   'count_emval_handles',
+  'getStringOrSymbol',
   'Emval',
   'emval_newers',
+  'emval_get_global',
+  'emval_lookupTypes',
   'emval_methodCallers',
   'emval_registeredMethods',
 ];
