@@ -44,13 +44,6 @@ canvas { width: 100vw; height: 100vh; display: block; }
     margin-right: -10px;
     min-height: 0;
 }
-#settings-panel form {
-    /* flex-grow: 1; */
-    /* overflow-y: auto; */
-    /* padding-right: 10px; */
-    /* margin-right: -10px; */
-    /* min-height: 0; */
-}
 #settings-panel form div {
     margin-bottom: 10px;
 }
