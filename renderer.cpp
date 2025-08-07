@@ -53,6 +53,9 @@ bool Renderer::init(float initialization_radius) {
     zoom_uniform_loc = glGetUniformLocation(shader_program, "u_zoom");
     min_radius_uniform_loc = glGetUniformLocation(shader_program, "u_min_radius");
     max_radius_uniform_loc = glGetUniformLocation(shader_program, "u_max_radius");
+    num_colors_uniform_loc = glGetUniformLocation(shader_program, "u_num_colors");
+    colors_uniform_loc = glGetUniformLocation(shader_program, "u_colors");
+    weights_uniform_loc = glGetUniformLocation(shader_program, "u_weights");
 
     emscripten_set_touchstart_callback("#canvas", this, true, touchstart_callback);
     emscripten_set_touchmove_callback("#canvas", this, true, touchmove_callback);
@@ -90,6 +93,10 @@ void Renderer::render(const std::vector<CelestialBody>& bodies, float min_radius
     glUniform1f(min_radius_uniform_loc, min_radius);
     glUniform1f(max_radius_uniform_loc, max_radius);
 
+    glUniform1i(num_colors_uniform_loc, colors.size());
+    glUniform3fv(colors_uniform_loc, colors.size(), (GLfloat*)colors.data());
+    glUniform1fv(weights_uniform_loc, weights.size(), weights.data());
+
     glBindVertexArray(particle_vao);
     glBindBuffer(GL_ARRAY_BUFFER, particle_vbo);
     glBufferData(GL_ARRAY_BUFFER, bodies.size() * sizeof(CelestialBody), bodies.data(), GL_DYNAMIC_DRAW);
@@ -97,6 +104,16 @@ void Renderer::render(const std::vector<CelestialBody>& bodies, float min_radius
     glDrawArrays(GL_POINTS, 0, bodies.size());
 
     glBindVertexArray(0);
+}
+
+void Renderer::set_colors(const std::vector<float>& color_data, const std::vector<float>& weight_data) {
+    colors.clear();
+    weights.clear();
+
+    for (size_t i = 0; i < color_data.size(); i += 3) {
+        colors.push_back({color_data[i], color_data[i+1], color_data[i+2]});
+    }
+    weights = weight_data;
 }
 
 GLuint Renderer::load_shader(GLenum type, const char* source) {

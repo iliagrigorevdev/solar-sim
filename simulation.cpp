@@ -216,6 +216,14 @@ int main(int argc, char* argv[]) {
     }
 
 #ifdef __EMSCRIPTEN__
+    emscripten::val get_initial_colors = emscripten::val::global("getInitialColors");
+    emscripten::val initial_color_data = get_initial_colors();
+    const std::vector<float> color_vec = emscripten::vecFromJSArray<float>(initial_color_data["colors"]);
+    const std::vector<float> weight_vec = emscripten::vecFromJSArray<float>(initial_color_data["weights"]);
+    g_renderer->set_colors(color_vec, weight_vec);
+#endif
+
+#ifdef __EMSCRIPTEN__
     static SimulationContext context_instance = { g_renderer, &g_bodies, &g_params, &g_quadtree };
     g_context = &context_instance;
     emscripten_set_resize_callback(EMSCRIPTEN_EVENT_TARGET_WINDOW, g_context, EM_FALSE, on_web_display_size_changed);
@@ -239,6 +247,14 @@ void increase_simulation_speed() {
 void decrease_simulation_speed() {
     if (g_simulation_speed > 1) {
         g_simulation_speed--;
+    }
+}
+
+void set_colors(const emscripten::val& colors, const emscripten::val& weights) {
+    if (g_renderer) {
+        const std::vector<float> color_vec = emscripten::vecFromJSArray<float>(colors);
+        const std::vector<float> weight_vec = emscripten::vecFromJSArray<float>(weights);
+        g_renderer->set_colors(color_vec, weight_vec);
     }
 }
 
@@ -269,5 +285,6 @@ EMSCRIPTEN_BINDINGS(simulation_module) {
     emscripten::function("getSimulationSpeed", &get_simulation_speed);
     emscripten::function("increaseSimulationSpeed", &increase_simulation_speed);
     emscripten::function("decreaseSimulationSpeed", &decrease_simulation_speed);
+    emscripten::function("setColors", &set_colors);
 }
 #endif

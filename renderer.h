@@ -18,6 +18,7 @@ public:
     void handle_touchstart(const EmscriptenTouchEvent *touchEvent);
     void handle_touchmove(const EmscriptenTouchEvent *touchEvent);
     void handle_touchend(const EmscriptenTouchEvent *touchEvent);
+    void set_colors(const std::vector<float>& color_data, const std::vector<float>& weight_data);
 
 private:
     int screen_width;
@@ -26,6 +27,10 @@ private:
     double initial_touch_dist = 0;
     float zoom = 1.0;
 
+    struct Color { float r, g, b; };
+    std::vector<Color> colors;
+    std::vector<float> weights;
+
     GLuint shader_program;
     GLint resolution_uniform_loc;
     GLint num_bodies_uniform_loc;
@@ -33,6 +38,9 @@ private:
     GLint zoom_uniform_loc;
     GLint min_radius_uniform_loc;
     GLint max_radius_uniform_loc;
+    GLint num_colors_uniform_loc;
+    GLint colors_uniform_loc;
+    GLint weights_uniform_loc;
 
     GLuint particle_vbo;
     GLuint particle_vao;

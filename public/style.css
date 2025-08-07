@@ -37,12 +37,19 @@ canvas { width: 100vw; height: 100vh; display: block; }
     padding-bottom: 10px;
     flex-shrink: 0;
 }
-#settings-panel form {
+#settings-content {
     flex-grow: 1;
     overflow-y: auto;
     padding-right: 10px;
     margin-right: -10px;
     min-height: 0;
+}
+#settings-panel form {
+    /* flex-grow: 1; */
+    /* overflow-y: auto; */
+    /* padding-right: 10px; */
+    /* margin-right: -10px; */
+    /* min-height: 0; */
 }
 #settings-panel form div {
     margin-bottom: 10px;
@@ -124,4 +131,48 @@ canvas { width: 100vw; height: 100vh; display: block; }
     font-size: 16px;
     min-width: 20px;
     text-align: center;
+}
+
+#color-stops .color-stop {
+    display: flex;
+    align-items: center;
+    margin-bottom: 10px;
+}
+
+#color-stops .color-stop input[type="color"] {
+    width: 40px;
+    height: 30px;
+    padding: 0;
+    border: none;
+    background: none;
+    margin-right: 10px;
+}
+
+#color-stops .color-stop input[type="number"] {
+    width: 60px;
+    margin-right: 10px;
+}
+
+#color-stops .color-stop .remove-color-stop-btn {
+    background: #f44336;
+    color: white;
+    border: none;
+    border-radius: 50%;
+    width: 20px;
+    height: 20px;
+    cursor: pointer;
+    font-weight: bold;
+    padding: 0;
+    line-height: 20px;
+}
+
+#add-color-stop-btn {
+    width: 100%;
+    padding: 8px;
+    background: #555;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    margin-top: 10px;
 }

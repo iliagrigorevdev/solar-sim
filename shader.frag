@@ -2,35 +2,44 @@
 #extension GL_OES_standard_derivatives : enable
 precision highp float;
 
+#define MAX_COLORS 8
+
 out vec4 out_color;
 
 uniform float u_min_radius;
 uniform float u_max_radius;
+uniform int u_num_colors;
+uniform vec3 u_colors[MAX_COLORS];
+uniform float u_weights[MAX_COLORS];
 
 in float v_radius;
 
-// Функция для отображения радиуса в цвет (фиолетовый-синий-зеленый-желтый-красный)
-vec3 radiusToColor(float radius) {
-    // The radius can be from u_min_radius to u_max_radius. We use a logarithmic scale.
-    float log_radius = log(radius);
-    // Normalize log_radius from [log(u_min_radius), log(u_max_radius)] to [0, 1]
-    float log_min = log(u_min_radius);
-    float log_max = log(u_max_radius);
-    float t = (log_radius - log_min) / (log_max - log_min);
-    t = clamp(t, 0.0, 1.0);
-
-    vec3 violet = vec3(0.6, 0.2, 1.0);
-    vec3 blue = vec3(0.2, 0.5, 1.0);
-    vec3 yellow = vec3(1.0, 0.9, 0.2);
-    vec3 red = vec3(1.0, 0.3, 0.2);
-
-    if (t < 0.5) {
-        return mix(violet, blue, t * 2.0);
-    } else if (t < 0.75) {
-        return mix(blue, yellow, (t - 0.5) * 4.0);
-    } else {
-        return mix(yellow, red, (t - 0.75) * 4.0);
+vec3 get_color_from_gradient(float t) {
+    if (u_num_colors == 0) {
+        return vec3(1.0, 1.0, 1.0); // Default to white if no colors
     }
+    if (u_num_colors == 1) {
+        return u_colors[0];
+    }
+
+    // Find the two colors to interpolate between
+    for (int i = 0; i < u_num_colors - 1; i++) {
+        if (t >= u_weights[i] && t <= u_weights[i+1]) {
+            // Normalize t within this segment
+            float segment_t = (t - u_weights[i]) / (u_weights[i+1] - u_weights[i]);
+            return mix(u_colors[i], u_colors[i+1], segment_t);
+        }
+    }
+
+    // Handle edge cases (t outside of defined weights)
+    if (t < u_weights[0]) {
+        return u_colors[0];
+    }
+    if (t > u_weights[u_num_colors - 1]) {
+        return u_colors[u_num_colors - 1];
+    }
+    
+    return vec3(1.0, 0.0, 1.0); // Magenta for error
 }
 
 void main() {
@@ -42,6 +51,13 @@ void main() {
         discard;
     }
 
-    vec3 color = radiusToColor(v_radius);
+    // Normalize radius on a logarithmic scale
+    float log_radius = log(v_radius);
+    float log_min = log(u_min_radius);
+    float log_max = log(u_max_radius);
+    float t = (log_radius - log_min) / (log_max - log_min);
+    t = clamp(t, 0.0, 1.0);
+
+    vec3 color = get_color_from_gradient(t);
     out_color = vec4(color, alpha);
 }
