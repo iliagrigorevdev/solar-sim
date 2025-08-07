@@ -1,5 +1,8 @@
 #!/bin/bash
 
+# Format HTML, CSS, JS files
+npm run format
+
 # Format C++ files
 clang-format -i -style=file *.cpp *.h
 

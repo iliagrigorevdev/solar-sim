@@ -1,3 +1,4 @@
 public/simulation.js
 public/simulation.wasm
 public/simulation.data
+node_modules

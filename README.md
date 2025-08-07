@@ -11,19 +11,20 @@ This project was created with the help of gemini-cli and the Gemini 2.5 Pro mode
 - **Real-time N-body simulation:** The core of the project is a physics-based simulation that calculates the gravitational interactions between all celestial bodies.
 - **WebGL Rendering:** The simulation is visualized using WebGL for efficient, hardware-accelerated graphics.
 - **Interactive Controls:**
-    - **Zoom:** Use a two-finger pinch gesture on touch devices to zoom in and out.
+  - **Zoom:** Use a two-finger pinch gesture on touch devices to zoom in and out.
 - **Customizable Parameters:** A settings panel allows you to adjust various simulation parameters in real-time:
-    - Gravitational Constant (G)
-    - Density of celestial bodies
-    - Number of bodies
-    - Initialization radius
-    - Time step (DT)
-    - Softening factor
-    - Maximum and minimum mass of generated bodies
+  - Gravitational Constant (G)
+  - Density of celestial bodies
+  - Number of bodies
+  - Initialization radius
+  - Time step (DT)
+  - Softening factor
+  - Maximum and minimum mass of generated bodies
 
 ## How it Works
 
 The simulation logic is written in C++ and handles the physics calculations for the movement of celestial bodies. This includes:
+
 - **Gravitational Force:** Calculating the force of gravity between all pairs of bodies.
 - **Collision Detection:** Detecting when celestial bodies collide.
 - **Collision Resolution:** Merging bodies that collide, conserving momentum and mass.
@@ -40,12 +41,14 @@ The C++ code is compiled to WebAssembly using Emscripten, which allows it to run
 ### Build Steps
 
 1.  **Clone the repository:**
+
     ```bash
     git clone https://github.com/iliagrigorevdev/solar-sim.git
     cd solar-sim
     ```
 
 2.  **Activate the Emscripten environment:**
+
     ```bash
     source /path/to/emsdk/emsdk_env.sh
     ```
@@ -64,11 +67,11 @@ The C++ code is compiled to WebAssembly using Emscripten, which allows it to run
 
 ## File Structure
 
--   `build.sh`: The build script for compiling the project.
--   `renderer.cpp` / `renderer.h`: Handles the WebGL rendering of the simulation.
--   `simulation.cpp` / `simulation.h`: Contains the core logic for the N-body simulation.
--   `shader.frag` / `shader.vert`: GLSL shaders for rendering the celestial bodies.
--   `docs/`: Contains the web-related files.
-    -   `index.html`: The main HTML file for the web interface.
-    -   `style.css`: CSS for styling the web page.
-    -   `simulation.js` / `simulation.wasm`: The compiled WebAssembly module and JavaScript bindings.
+- `build.sh`: The build script for compiling the project.
+- `renderer.cpp` / `renderer.h`: Handles the WebGL rendering of the simulation.
+- `simulation.cpp` / `simulation.h`: Contains the core logic for the N-body simulation.
+- `shader.frag` / `shader.vert`: GLSL shaders for rendering the celestial bodies.
+- `docs/`: Contains the web-related files.
+  - `index.html`: The main HTML file for the web interface.
+  - `style.css`: CSS for styling the web page.
+  - `simulation.js` / `simulation.wasm`: The compiled WebAssembly module and JavaScript bindings.

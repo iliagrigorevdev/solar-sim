@@ -1,0 +1,24 @@
+{
+  "name": "solar-sim",
+  "version": "1.0.0",
+  "description": "[![Run Simulation](https://img.shields.io/badge/Run-Simulation-brightgreen)](https://iliagrigorevdev.github.io/solar-sim/)",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "format": "prettier --write ."
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/iliagrigorevdev/solar-sim.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/iliagrigorevdev/solar-sim/issues"
+  },
+  "homepage": "https://github.com/iliagrigorevdev/solar-sim#readme",
+  "devDependencies": {
+    "prettier": "^3.6.2"
+  }
+}
