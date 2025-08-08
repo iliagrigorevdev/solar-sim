@@ -172,7 +172,14 @@ Renderer* g_renderer = nullptr;
 int g_simulation_speed = 1;
 Quadtree* g_quadtree = nullptr;
 
+void reset_simulation();
+
 // Функция для сброса симуляции
+void reset_simulation_to_defaults() {
+  g_params = SimulationParameters();
+  reset_simulation();
+}
+
 void reset_simulation() {
   initialize_bodies(g_bodies, g_params);
   if (g_quadtree) {
@@ -294,6 +301,8 @@ EMSCRIPTEN_BINDINGS(simulation_module) {
                              reset_simulation();
                            }));
 
+  emscripten::function("resetSimulationToDefaults",
+                       &reset_simulation_to_defaults);
   emscripten::function("resetSimulation", &reset_simulation);
 
   emscripten::function("getSimulationSpeed", &get_simulation_speed);

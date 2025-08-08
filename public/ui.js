@@ -181,9 +181,16 @@ function applySettings() {
 }
 
 function resetSettings() {
-  console.log('Resetting settings to default by reloading.');
+  console.log('Resetting settings to default.');
   localStorage.removeItem('simulationSettings');
-  window.location.reload();
+  colorStops = [...defaultColorStops];
+  if (wasmReady) {
+    Module.resetSimulationToDefaults();
+    populateSettingsForm();
+    renderColorStops();
+    applyColors();
+  }
+  settingsPanel.classList.add('hidden');
 }
 
 settingsBtn.addEventListener('click', () => {
