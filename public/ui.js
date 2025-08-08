@@ -1,3 +1,4 @@
+const fullscreenBtn = document.getElementById('fullscreen-btn');
 const settingsBtn = document.getElementById('settings-btn');
 const settingsPanel = document.getElementById('settings-panel');
 const closeBtn = document.getElementById('close-settings-btn');
@@ -197,6 +198,16 @@ closeBtn.addEventListener('click', () => {
 
 saveBtn.addEventListener('click', applySettings);
 resetBtn.addEventListener('click', resetSettings);
+
+fullscreenBtn.addEventListener('click', () => {
+  if (!document.fullscreenElement) {
+    document.documentElement.requestFullscreen();
+  } else {
+    if (document.exitFullscreen) {
+      document.exitFullscreen();
+    }
+  }
+});
 
 var Module = {
   canvas: (function () {
