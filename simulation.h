@@ -20,16 +20,17 @@ struct CelestialBody {
 
 // Структура для хранения параметров симуляции
 struct SimulationParameters {
-  float G;                      // Гравитационная постоянная
-  float DENSITY;                // Плотность
-  int NUM_BODIES;               // Количество небесных тел
-  float INITIALIZATION_RADIUS;  // Радиус круга для начальной генерации объектов
-  float DT;                     // Шаг по времени
-  float SOFTENING_FACTOR;       // Смягчающий фактор
-  float MAX_MASS;               // Максимальная масса
-  float MIN_MASS;               // Минимальная масса
-  float CENTRAL_BODY_MASS;      // Масса центрального объекта
-  float THETA = 0.5f;           // Точность для алгоритма Барнса-Хата
+  float G = 10.0f;        // Гравитационная постоянная
+  float DENSITY = 1.0f;   // Плотность
+  int NUM_BODIES = 1000;  // Количество небесных тел
+  float INITIALIZATION_RADIUS =
+      100.0f;        // Радиус круга для начальной генерации объектов
+  float DT = 0.05f;  // Шаг по времени
+  float SOFTENING_FACTOR = 10.0f;     // Смягчающий фактор
+  float MAX_MASS = 0.1f;              // Максимальная масса
+  float MIN_MASS = 0.001f;            // Минимальная масса
+  float CENTRAL_BODY_MASS = 1000.0f;  // Масса центрального объекта
+  float THETA = 0.5f;                 // Точность для алгоритма Барнса-Хата
 };
 
 // Объявление функций

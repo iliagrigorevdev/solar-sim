@@ -199,17 +199,6 @@ void main_loop(void* arg) {
 #endif
 
 int main(int argc, char* argv[]) {
-  // Устанавливаем параметры по умолчанию
-  g_params.G = 10.0f;
-  g_params.DENSITY = 1.0f;
-  g_params.NUM_BODIES = 1000;
-  g_params.INITIALIZATION_RADIUS = 100.0f;
-  g_params.DT = 0.05f;
-  g_params.SOFTENING_FACTOR = 10.0f;
-  g_params.MAX_MASS = 0.1f;
-  g_params.MIN_MASS = 0.001f;
-  g_params.CENTRAL_BODY_MASS = 1000.0f;
-
   initialize_bodies(g_bodies, g_params);
 
   Boundary boundary = {0.0f, 0.0f, g_params.INITIALIZATION_RADIUS * 2.0f};
