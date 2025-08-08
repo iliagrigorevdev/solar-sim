@@ -117,6 +117,12 @@ void Renderer::render(const std::vector<CelestialBody> &bodies,
   glBindVertexArray(0);
 }
 
+void Renderer::set_initialization_radius(float radius) {
+  this->initialization_radius = radius;
+}
+
+void Renderer::reset_zoom() { this->zoom = 1.0f; }
+
 void Renderer::set_colors(const std::vector<float> &color_data,
                           const std::vector<float> &weight_data) {
   colors.clear();

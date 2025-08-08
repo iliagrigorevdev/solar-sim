@@ -23,6 +23,8 @@ class Renderer {
   void handle_touchend(const EmscriptenTouchEvent *touchEvent);
   void set_colors(const std::vector<float> &color_data,
                   const std::vector<float> &weight_data);
+  void set_initialization_radius(float radius);
+  void reset_zoom();
 
  private:
   int screen_width;

@@ -297,6 +297,11 @@ EMSCRIPTEN_BINDINGS(simulation_module) {
                        emscripten::select_overload<void(SimulationParameters)>(
                            [](SimulationParameters new_params) {
                              g_params = new_params;
+                             if (g_renderer) {
+                               g_renderer->set_initialization_radius(
+                                   new_params.INITIALIZATION_RADIUS);
+                               g_renderer->reset_zoom();
+                             }
                              reset_simulation();
                            }));
 
