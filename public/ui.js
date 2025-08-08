@@ -256,3 +256,20 @@ var Module = {
 };
 
 saveBtn.disabled = true;
+
+let hideTimeout;
+
+function showUI() {
+  fullscreenBtn.classList.remove('hidden-ui');
+  settingsBtn.classList.remove('hidden-ui');
+  clearTimeout(hideTimeout);
+  hideTimeout = setTimeout(() => {
+    fullscreenBtn.classList.add('hidden-ui');
+    settingsBtn.classList.add('hidden-ui');
+  }, 3000);
+}
+
+document.body.addEventListener('mousemove', showUI);
+document.body.addEventListener('touchstart', showUI);
+
+showUI();
