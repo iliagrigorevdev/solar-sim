@@ -2,6 +2,7 @@ const settingsBtn = document.getElementById('settings-btn');
 const settingsPanel = document.getElementById('settings-panel');
 const closeBtn = document.getElementById('close-settings-btn');
 const saveBtn = document.getElementById('save-settings-btn');
+const resetBtn = document.getElementById('reset-settings-btn');
 const form = document.getElementById('settings-form');
 const decreaseSpeedBtn = document.getElementById('decrease-speed-btn');
 const increaseSpeedBtn = document.getElementById('increase-speed-btn');
@@ -10,12 +11,14 @@ const colorStopsContainer = document.getElementById('color-stops');
 const addColorStopBtn = document.getElementById('add-color-stop-btn');
 let wasmReady = false;
 
-let colorStops = [
+const defaultColorStops = [
   { color: '#9933ff', weight: 0.0 },
   { color: '#337fff', weight: 0.5 },
   { color: '#ffe533', weight: 0.75 },
   { color: '#ff4c33', weight: 1.0 },
 ];
+
+let colorStops = [...defaultColorStops];
 
 function renderColorStops() {
   colorStopsContainer.innerHTML = '';
@@ -104,27 +107,27 @@ increaseSpeedBtn.addEventListener('click', () => {
   updateSimulationSpeed();
 });
 
+const simulationParameterKeys = [
+  'G',
+  'DENSITY',
+  'NUM_BODIES',
+  'INITIALIZATION_RADIUS',
+  'DT',
+  'SOFTENING_FACTOR',
+  'MAX_MASS',
+  'MIN_MASS',
+  'CENTRAL_BODY_MASS',
+  'THETA',
+];
+
 function populateSettingsForm() {
   if (!wasmReady) return;
   updateSimulationSpeed();
   const params = Module.getSimulationParameters();
-  const keys = [
-    'G',
-    'DENSITY',
-    'NUM_BODIES',
-    'INITIALIZATION_RADIUS',
-    'DT',
-    'SOFTENING_FACTOR',
-    'MAX_MASS',
-    'MIN_MASS',
-    'CENTRAL_BODY_MASS',
-    'THETA',
-  ];
-  for (const key of keys) {
+  for (const key of simulationParameterKeys) {
     if (form.elements[key] && params.hasOwnProperty(key)) {
       const value = params[key];
       if (form.elements[key].step === 'any') {
-        // Check if it's a float input
         form.elements[key].value = parseFloat(value.toPrecision(7));
       } else {
         form.elements[key].value = value;
@@ -133,17 +136,53 @@ function populateSettingsForm() {
   }
 }
 
+function saveSettings() {
+  const settings = {};
+  for (const key of simulationParameterKeys) {
+    if (form.elements[key]) {
+      settings[key] = form.elements[key].value;
+    }
+  }
+  settings.colorStops = colorStops;
+  localStorage.setItem('simulationSettings', JSON.stringify(settings));
+}
+
+function loadSettings() {
+  const savedSettings = localStorage.getItem('simulationSettings');
+  if (savedSettings) {
+    const settings = JSON.parse(savedSettings);
+    if (settings.colorStops) {
+      colorStops = settings.colorStops;
+    }
+    const newParams = {};
+    for (const key of simulationParameterKeys) {
+      if (settings.hasOwnProperty(key)) {
+        newParams[key] = Number(settings[key]) || 0;
+      }
+    }
+    Module.setSimulationParameters(newParams);
+  }
+}
+
 function applySettings() {
   if (!wasmReady) return;
   const newParams = {};
-  const formData = new FormData(form);
-  for (const [key, value] of formData.entries()) {
-    newParams[key] = Number(value) || 0;
+  for (const key of simulationParameterKeys) {
+    if (form.elements[key]) {
+      newParams[key] = Number(form.elements[key].value) || 0;
+    }
   }
   Module.setSimulationParameters(newParams);
   applyColors();
-  console.log('Settings applied and simulation reset.');
+  saveSettings();
   settingsPanel.classList.add('hidden');
+  console.log('Settings applied and saved.');
+}
+
+function resetSettings() {
+  console.log('Resetting settings to default by reloading.');
+  localStorage.removeItem('simulationSettings');
+  window.location.reload();
 }
 
 settingsBtn.addEventListener('click', () => {
@@ -157,6 +196,7 @@ closeBtn.addEventListener('click', () => {
 });
 
 saveBtn.addEventListener('click', applySettings);
+resetBtn.addEventListener('click', resetSettings);
 
 var Module = {
   canvas: (function () {
@@ -166,8 +206,12 @@ var Module = {
     console.log('WASM Runtime Initialized.');
     wasmReady = true;
     saveBtn.disabled = false;
+
+    loadSettings();
+
     populateSettingsForm();
     renderColorStops();
+    applyColors();
   },
 };
 
