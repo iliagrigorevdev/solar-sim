@@ -1,3 +1,4 @@
+const fullscreenBtn = document.getElementById('fullscreen-btn');
 const settingsBtn = document.getElementById('settings-btn');
 const settingsPanel = document.getElementById('settings-panel');
 const closeBtn = document.getElementById('close-settings-btn');
@@ -197,6 +198,45 @@ closeBtn.addEventListener('click', () => {
 
 saveBtn.addEventListener('click', applySettings);
 resetBtn.addEventListener('click', resetSettings);
+
+let wakeLock = null;
+
+const requestWakeLock = async () => {
+  try {
+    wakeLock = await navigator.wakeLock.request('screen');
+    wakeLock.addEventListener('release', () => {
+      console.log('Screen Wake Lock released:', wakeLock.released);
+    });
+    console.log('Screen Wake Lock is active.');
+  } catch (err) {
+    console.error(`${err.name}, ${err.message}`);
+  }
+};
+
+const releaseWakeLock = async () => {
+  if (wakeLock !== null) {
+    await wakeLock.release();
+    wakeLock = null;
+  }
+};
+
+fullscreenBtn.addEventListener('click', () => {
+  if (!document.fullscreenElement) {
+    document.documentElement.requestFullscreen();
+  } else {
+    if (document.exitFullscreen) {
+      document.exitFullscreen();
+    }
+  }
+});
+
+document.addEventListener('fullscreenchange', async () => {
+  if (document.fullscreenElement) {
+    await requestWakeLock();
+  } else {
+    await releaseWakeLock();
+  }
+});
 
 var Module = {
   canvas: (function () {

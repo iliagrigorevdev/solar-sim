@@ -9,6 +9,19 @@ canvas {
   height: 100vh;
   display: block;
 }
+#fullscreen-btn {
+  position: absolute;
+  top: 15px;
+  left: 15px;
+  cursor: pointer;
+  z-index: 100;
+  user-select: none;
+}
+
+#fullscreen-btn img {
+  width: 24px;
+  height: 24px;
+}
 #settings-btn {
   position: absolute;
   top: 15px;
