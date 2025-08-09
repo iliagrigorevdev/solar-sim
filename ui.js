@@ -1,5 +1,6 @@
 const fullscreenBtn = document.getElementById('fullscreen-btn');
 const settingsBtn = document.getElementById('settings-btn');
+const shareBtn = document.getElementById('share-btn');
 const settingsPanel = document.getElementById('settings-panel');
 const closeBtn = document.getElementById('close-settings-btn');
 const saveBtn = document.getElementById('save-settings-btn');
@@ -206,6 +207,30 @@ closeBtn.addEventListener('click', () => {
 saveBtn.addEventListener('click', applySettings);
 resetBtn.addEventListener('click', resetSettings);
 
+shareBtn.addEventListener('click', () => {
+  if (!wasmReady) return;
+
+  const simulationData = {
+    parameters: Module.getSimulationParameters(),
+    bodies: Module.getBodies(),
+    colors: colorStops,
+  };
+
+  const serializedData = JSON.stringify(simulationData);
+  const encodedData = btoa(serializedData);
+  const baseUrl = `${window.location.origin}${window.location.pathname}`;
+  const url = `${baseUrl}?simulation=${encodedData}`;
+
+  navigator.clipboard.writeText(url).then(
+    () => {
+      alert('Sharable link copied to clipboard!');
+    },
+    () => {
+      alert('Failed to copy sharable link.');
+    }
+  );
+});
+
 let wakeLock = null;
 
 const requestWakeLock = async () => {
@@ -254,7 +279,31 @@ var Module = {
     wasmReady = true;
     saveBtn.disabled = false;
 
-    loadSettings();
+    const urlParams = new URLSearchParams(window.location.search);
+    const simulationData = urlParams.get('simulation');
+
+    if (simulationData) {
+      try {
+        const decodedData = atob(simulationData);
+        const parsedData = JSON.parse(decodedData);
+
+        if (parsedData.parameters) {
+          Module.setSimulationParameters(parsedData.parameters);
+        }
+        if (parsedData.bodies) {
+          Module.setBodies(parsedData.bodies);
+          Module.markStateAsLoaded();
+        }
+        if (parsedData.colors) {
+          colorStops = parsedData.colors;
+        }
+      } catch (e) {
+        console.error('Failed to load simulation from URL:', e);
+        loadSettings();
+      }
+    } else {
+      loadSettings();
+    }
 
     populateSettingsForm();
     renderColorStops();
@@ -269,10 +318,12 @@ let hideTimeout;
 function showUI() {
   fullscreenBtn.classList.remove('hidden-ui');
   settingsBtn.classList.remove('hidden-ui');
+  shareBtn.classList.remove('hidden-ui');
   clearTimeout(hideTimeout);
   hideTimeout = setTimeout(() => {
     fullscreenBtn.classList.add('hidden-ui');
     settingsBtn.classList.add('hidden-ui');
+    shareBtn.classList.add('hidden-ui');
   }, 3000);
 }
 

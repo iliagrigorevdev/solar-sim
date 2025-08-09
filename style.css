@@ -36,6 +36,20 @@ canvas {
   height: 24px;
 }
 
+#share-btn {
+  position: absolute;
+  top: 15px;
+  right: 60px;
+  cursor: pointer;
+  z-index: 100;
+  user-select: none;
+}
+
+#share-btn img {
+  width: 24px;
+  height: 24px;
+}
+
 #settings-panel {
   position: absolute;
   top: 60px;

@@ -1260,6 +1260,84 @@ function dbg(text) {
       }
     }
 
+  var UTF8Decoder = typeof TextDecoder != 'undefined' ? new TextDecoder('utf8') : undefined;
+  
+    /**
+     * Given a pointer 'idx' to a null-terminated UTF8-encoded string in the given
+     * array that contains uint8 values, returns a copy of that string as a
+     * Javascript String object.
+     * heapOrArray is either a regular array, or a JavaScript typed array view.
+     * @param {number} idx
+     * @param {number=} maxBytesToRead
+     * @return {string}
+     */
+  function UTF8ArrayToString(heapOrArray, idx, maxBytesToRead) {
+      var endIdx = idx + maxBytesToRead;
+      var endPtr = idx;
+      // TextDecoder needs to know the byte length in advance, it doesn't stop on
+      // null terminator by itself.  Also, use the length info to avoid running tiny
+      // strings through TextDecoder, since .subarray() allocates garbage.
+      // (As a tiny code save trick, compare endPtr against endIdx using a negation,
+      // so that undefined means Infinity)
+      while (heapOrArray[endPtr] && !(endPtr >= endIdx)) ++endPtr;
+  
+      if (endPtr - idx > 16 && heapOrArray.buffer && UTF8Decoder) {
+        return UTF8Decoder.decode(heapOrArray.subarray(idx, endPtr));
+      }
+      var str = '';
+      // If building with TextDecoder, we have already computed the string length
+      // above, so test loop end condition against that
+      while (idx < endPtr) {
+        // For UTF8 byte structure, see:
+        // http://en.wikipedia.org/wiki/UTF-8#Description
+        // https://www.ietf.org/rfc/rfc2279.txt
+        // https://tools.ietf.org/html/rfc3629
+        var u0 = heapOrArray[idx++];
+        if (!(u0 & 0x80)) { str += String.fromCharCode(u0); continue; }
+        var u1 = heapOrArray[idx++] & 63;
+        if ((u0 & 0xE0) == 0xC0) { str += String.fromCharCode(((u0 & 31) << 6) | u1); continue; }
+        var u2 = heapOrArray[idx++] & 63;
+        if ((u0 & 0xF0) == 0xE0) {
+          u0 = ((u0 & 15) << 12) | (u1 << 6) | u2;
+        } else {
+          if ((u0 & 0xF8) != 0xF0) warnOnce('Invalid UTF-8 leading byte ' + ptrToString(u0) + ' encountered when deserializing a UTF-8 string in wasm memory to a JS string!');
+          u0 = ((u0 & 7) << 18) | (u1 << 12) | (u2 << 6) | (heapOrArray[idx++] & 63);
+        }
+  
+        if (u0 < 0x10000) {
+          str += String.fromCharCode(u0);
+        } else {
+          var ch = u0 - 0x10000;
+          str += String.fromCharCode(0xD800 | (ch >> 10), 0xDC00 | (ch & 0x3FF));
+        }
+      }
+      return str;
+    }
+  
+  
+    /**
+     * Given a pointer 'ptr' to a null-terminated UTF8-encoded string in the
+     * emscripten HEAP, returns a copy of that string as a Javascript String object.
+     *
+     * @param {number} ptr
+     * @param {number=} maxBytesToRead - An optional length that specifies the
+     *   maximum number of bytes to read. You can omit this parameter to scan the
+     *   string until the first   byte. If maxBytesToRead is passed, and the string
+     *   at [ptr, ptr+maxBytesToReadr[ contains a null byte in the middle, then the
+     *   string will cut short at that byte index (i.e. maxBytesToRead will not
+     *   produce a string of exact length [ptr, ptr+maxBytesToRead[) N.B. mixing
+     *   frequent uses of UTF8ToString() with and without maxBytesToRead may throw
+     *   JS JIT optimizations off, so it is worth to consider consistently using one
+     * @return {string}
+     */
+  function UTF8ToString(ptr, maxBytesToRead) {
+      assert(typeof ptr == 'number');
+      return ptr ? UTF8ArrayToString(HEAPU8, ptr, maxBytesToRead) : '';
+    }
+  function ___assert_fail(condition, filename, line, func) {
+      abort('Assertion failed: ' + UTF8ToString(condition) + ', at: ' + [filename ? UTF8ToString(filename) : 'unknown filename', line, func ? UTF8ToString(func) : 'unknown function']);
+    }
+
   /** @constructor */
   function ExceptionInfo(excPtr) {
       this.excPtr = excPtr;
@@ -3596,80 +3674,6 @@ function dbg(text) {
         abort('FS.standardizePath has been removed; use PATH.normalize instead');
       }};
   
-  var UTF8Decoder = typeof TextDecoder != 'undefined' ? new TextDecoder('utf8') : undefined;
-  
-    /**
-     * Given a pointer 'idx' to a null-terminated UTF8-encoded string in the given
-     * array that contains uint8 values, returns a copy of that string as a
-     * Javascript String object.
-     * heapOrArray is either a regular array, or a JavaScript typed array view.
-     * @param {number} idx
-     * @param {number=} maxBytesToRead
-     * @return {string}
-     */
-  function UTF8ArrayToString(heapOrArray, idx, maxBytesToRead) {
-      var endIdx = idx + maxBytesToRead;
-      var endPtr = idx;
-      // TextDecoder needs to know the byte length in advance, it doesn't stop on
-      // null terminator by itself.  Also, use the length info to avoid running tiny
-      // strings through TextDecoder, since .subarray() allocates garbage.
-      // (As a tiny code save trick, compare endPtr against endIdx using a negation,
-      // so that undefined means Infinity)
-      while (heapOrArray[endPtr] && !(endPtr >= endIdx)) ++endPtr;
-  
-      if (endPtr - idx > 16 && heapOrArray.buffer && UTF8Decoder) {
-        return UTF8Decoder.decode(heapOrArray.subarray(idx, endPtr));
-      }
-      var str = '';
-      // If building with TextDecoder, we have already computed the string length
-      // above, so test loop end condition against that
-      while (idx < endPtr) {
-        // For UTF8 byte structure, see:
-        // http://en.wikipedia.org/wiki/UTF-8#Description
-        // https://www.ietf.org/rfc/rfc2279.txt
-        // https://tools.ietf.org/html/rfc3629
-        var u0 = heapOrArray[idx++];
-        if (!(u0 & 0x80)) { str += String.fromCharCode(u0); continue; }
-        var u1 = heapOrArray[idx++] & 63;
-        if ((u0 & 0xE0) == 0xC0) { str += String.fromCharCode(((u0 & 31) << 6) | u1); continue; }
-        var u2 = heapOrArray[idx++] & 63;
-        if ((u0 & 0xF0) == 0xE0) {
-          u0 = ((u0 & 15) << 12) | (u1 << 6) | u2;
-        } else {
-          if ((u0 & 0xF8) != 0xF0) warnOnce('Invalid UTF-8 leading byte ' + ptrToString(u0) + ' encountered when deserializing a UTF-8 string in wasm memory to a JS string!');
-          u0 = ((u0 & 7) << 18) | (u1 << 12) | (u2 << 6) | (heapOrArray[idx++] & 63);
-        }
-  
-        if (u0 < 0x10000) {
-          str += String.fromCharCode(u0);
-        } else {
-          var ch = u0 - 0x10000;
-          str += String.fromCharCode(0xD800 | (ch >> 10), 0xDC00 | (ch & 0x3FF));
-        }
-      }
-      return str;
-    }
-  
-  
-    /**
-     * Given a pointer 'ptr' to a null-terminated UTF8-encoded string in the
-     * emscripten HEAP, returns a copy of that string as a Javascript String object.
-     *
-     * @param {number} ptr
-     * @param {number=} maxBytesToRead - An optional length that specifies the
-     *   maximum number of bytes to read. You can omit this parameter to scan the
-     *   string until the first   byte. If maxBytesToRead is passed, and the string
-     *   at [ptr, ptr+maxBytesToReadr[ contains a null byte in the middle, then the
-     *   string will cut short at that byte index (i.e. maxBytesToRead will not
-     *   produce a string of exact length [ptr, ptr+maxBytesToRead[) N.B. mixing
-     *   frequent uses of UTF8ToString() with and without maxBytesToRead may throw
-     *   JS JIT optimizations off, so it is worth to consider consistently using one
-     * @return {string}
-     */
-  function UTF8ToString(ptr, maxBytesToRead) {
-      assert(typeof ptr == 'number');
-      return ptr ? UTF8ArrayToString(HEAPU8, ptr, maxBytesToRead) : '';
-    }
   var SYSCALLS = {DEFAULT_POLLMASK:5,calculateAt:function(dirfd, path, allowEmpty) {
         if (PATH.isAbs(path)) {
           return path;
@@ -5105,7 +5109,11 @@ function dbg(text) {
       return Emval.toHandle(rv);
     }
 
-
+  function emval_allocateDestructors(destructorsRef) {
+      var destructors = [];
+      HEAPU32[((destructorsRef)>>2)] = Emval.toHandle(destructors);
+      return destructors;
+    }
   
   var emval_symbols = {};
   
@@ -5116,6 +5124,18 @@ function dbg(text) {
       }
       return symbol;
     }
+  
+  var emval_methodCallers = [];
+  
+  function __emval_call_void_method(caller, handle, methodName, args) {
+      caller = emval_methodCallers[caller];
+      handle = Emval.toValue(handle);
+      methodName = getStringOrSymbol(methodName);
+      caller(handle, methodName, null, args);
+    }
+
+
+  
   
   function emval_get_global() {
       if (typeof globalThis == 'object') {
@@ -5134,15 +5154,90 @@ function dbg(text) {
       }
     }
 
+  function emval_addMethodCaller(caller) {
+      var id = emval_methodCallers.length;
+      emval_methodCallers.push(caller);
+      return id;
+    }
+  
+  
+  
+  var emval_registeredMethods = [];
+  
+  function __emval_get_method_caller(argCount, argTypes) {
+      var types = emval_lookupTypes(argCount, argTypes);
+      var retType = types[0];
+      var signatureName = retType.name + "_$" + types.slice(1).map(function (t) { return t.name; }).join("_") + "$";
+      var returnId = emval_registeredMethods[signatureName];
+      if (returnId !== undefined) {
+        return returnId;
+      }
+  
+      var params = ["retType"];
+      var args = [retType];
+  
+      var argsList = ""; // 'arg0, arg1, arg2, ... , argN'
+      for (var i = 0; i < argCount - 1; ++i) {
+        argsList += (i !== 0 ? ", " : "") + "arg" + i;
+        params.push("argType" + i);
+        args.push(types[1 + i]);
+      }
+  
+      var functionName = makeLegalFunctionName("methodCaller_" + signatureName);
+      var functionBody =
+          "return function " + functionName + "(handle, name, destructors, args) {\n";
+  
+      var offset = 0;
+      for (var i = 0; i < argCount - 1; ++i) {
+          functionBody +=
+          "    var arg" + i + " = argType" + i + ".readValueFromPointer(args" + (offset ? ("+"+offset) : "") + ");\n";
+          offset += types[i + 1]['argPackAdvance'];
+      }
+      functionBody +=
+          "    var rv = handle[name](" + argsList + ");\n";
+      for (var i = 0; i < argCount - 1; ++i) {
+          if (types[i + 1]['deleteObject']) {
+              functionBody +=
+              "    argType" + i + ".deleteObject(arg" + i + ");\n";
+          }
+      }
+      if (!retType.isVoid) {
+          functionBody +=
+          "    return retType.toWireType(destructors, rv);\n";
+      }
+      functionBody +=
+          "};\n";
+  
+      params.push(functionBody);
+      var invokerFunction = newFunc(Function, params).apply(null, args);
+      returnId = emval_addMethodCaller(invokerFunction);
+      emval_registeredMethods[signatureName] = returnId;
+      return returnId;
+    }
+
   function __emval_get_property(handle, key) {
       handle = Emval.toValue(handle);
       key = Emval.toValue(key);
       return Emval.toHandle(handle[key]);
     }
 
+  function __emval_incref(handle) {
+      if (handle > 4) {
+        emval_handles.get(handle).refcount += 1;
+      }
+    }
+
+  function __emval_new_array() {
+      return Emval.toHandle([]);
+    }
+
   
   function __emval_new_cstring(v) {
       return Emval.toHandle(getStringOrSymbol(v));
+    }
+
+  function __emval_new_object() {
+      return Emval.toHandle({});
     }
 
   
@@ -5151,6 +5246,13 @@ function dbg(text) {
       var destructors = Emval.toValue(handle);
       runDestructors(destructors);
       __emval_decref(handle);
+    }
+
+  function __emval_set_property(handle, key, value) {
+      handle = Emval.toValue(handle);
+      key = Emval.toValue(key);
+      value = Emval.toValue(value);
+      handle[key] = value;
     }
 
   
@@ -7934,6 +8036,7 @@ function checkIncomingModuleAPI() {
   ignoredModuleProp('fetchSettings');
 }
 var wasmImports = {
+  "__assert_fail": ___assert_fail,
   "__cxa_throw": ___cxa_throw,
   "__syscall_fcntl64": ___syscall_fcntl64,
   "__syscall_ioctl": ___syscall_ioctl,
@@ -7954,11 +8057,17 @@ var wasmImports = {
   "_emscripten_get_now_is_monotonic": __emscripten_get_now_is_monotonic,
   "_emval_as": __emval_as,
   "_emval_call": __emval_call,
+  "_emval_call_void_method": __emval_call_void_method,
   "_emval_decref": __emval_decref,
   "_emval_get_global": __emval_get_global,
+  "_emval_get_method_caller": __emval_get_method_caller,
   "_emval_get_property": __emval_get_property,
+  "_emval_incref": __emval_incref,
+  "_emval_new_array": __emval_new_array,
   "_emval_new_cstring": __emval_new_cstring,
+  "_emval_new_object": __emval_new_object,
   "_emval_run_destructors": __emval_run_destructors,
+  "_emval_set_property": __emval_set_property,
   "_emval_take_value": __emval_take_value,
   "abort": _abort,
   "emscripten_date_now": _emscripten_date_now,
@@ -8260,8 +8369,6 @@ var missingLibrarySymbols = [
   'upcastPointer',
   'validateThis',
   'craftEmvalAllocator',
-  'emval_allocateDestructors',
-  'emval_addMethodCaller',
 ];
 missingLibrarySymbols.forEach(missingLibrarySymbol)
 
@@ -8457,7 +8564,9 @@ var unexportedSymbols = [
   'emval_newers',
   'emval_get_global',
   'emval_lookupTypes',
+  'emval_allocateDestructors',
   'emval_methodCallers',
+  'emval_addMethodCaller',
   'emval_registeredMethods',
 ];
 unexportedSymbols.forEach(unexportedRuntimeSymbol);
