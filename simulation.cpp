@@ -38,6 +38,12 @@ EM_BOOL on_web_display_size_changed(int event_type,
 }
 #endif
 
+bool stateLoaded = false;
+
+bool isStateLoaded() { return stateLoaded; }
+
+void markStateAsLoaded() { stateLoaded = true; }
+
 // Функция для инициализации небесных тел
 void initialize_bodies(std::vector<CelestialBody>& bodies,
                        const SimulationParameters& params) {
@@ -206,10 +212,9 @@ void main_loop(void* arg) {
 #endif
 
 int main(int argc, char* argv[]) {
-  initialize_bodies(g_bodies, g_params);
-
-  Boundary boundary = {0.0f, 0.0f, g_params.INITIALIZATION_RADIUS * 2.0f};
-  g_quadtree = new Quadtree(boundary, 4);
+  if (!isStateLoaded()) {
+    reset_simulation();
+  }
 
   int width, height;
 #ifdef __EMSCRIPTEN__
@@ -271,6 +276,39 @@ void set_colors(const emscripten::val& colors, const emscripten::val& weights) {
   }
 }
 
+emscripten::val getBodies() {
+  emscripten::val bodies_val = emscripten::val::array();
+  for (const auto& body : g_bodies) {
+    emscripten::val body_obj = emscripten::val::object();
+    body_obj.set("id", body.id);
+    body_obj.set("x", body.x);
+    body_obj.set("y", body.y);
+    body_obj.set("vx", body.vx);
+    body_obj.set("vy", body.vy);
+    body_obj.set("mass", body.mass);
+    body_obj.set("radius", body.radius);
+    bodies_val.call<void>("push", body_obj);
+  }
+  return bodies_val;
+}
+
+void setBodies(const emscripten::val& bodies_val) {
+  g_bodies.clear();
+  const int body_count = bodies_val["length"].as<int>();
+  for (int i = 0; i < body_count; ++i) {
+    emscripten::val body_obj = bodies_val[i];
+    CelestialBody body;
+    body.id = body_obj["id"].as<int>();
+    body.x = body_obj["x"].as<float>();
+    body.y = body_obj["y"].as<float>();
+    body.vx = body_obj["vx"].as<float>();
+    body.vy = body_obj["vy"].as<float>();
+    body.mass = body_obj["mass"].as<float>();
+    body.radius = body_obj["radius"].as<float>();
+    g_bodies.push_back(body);
+  }
+}
+
 EMSCRIPTEN_BINDINGS(simulation_module) {
   emscripten::value_object<SimulationParameters>("SimulationParameters")
       .field("G", &SimulationParameters::G)
@@ -304,10 +342,13 @@ EMSCRIPTEN_BINDINGS(simulation_module) {
   emscripten::function("resetSimulationToDefaults",
                        &reset_simulation_to_defaults);
   emscripten::function("resetSimulation", &reset_simulation);
-
+  emscripten::function("isStateLoaded", &isStateLoaded);
+  emscripten::function("markStateAsLoaded", &markStateAsLoaded);
   emscripten::function("getSimulationSpeed", &get_simulation_speed);
   emscripten::function("increaseSimulationSpeed", &increase_simulation_speed);
   emscripten::function("decreaseSimulationSpeed", &decrease_simulation_speed);
   emscripten::function("setColors", &set_colors);
+  emscripten::function("getBodies", &getBodies);
+  emscripten::function("setBodies", &setBodies);
 }
 #endif

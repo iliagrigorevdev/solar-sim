@@ -3,6 +3,10 @@
 
 #include <vector>
 
+#ifdef __EMSCRIPTEN__
+#include <emscripten/bind.h>
+#endif
+
 #include "quadtree.h"
 
 // Структура для представления небесного тела
@@ -38,5 +42,14 @@ void initialize_bodies(std::vector<CelestialBody>& bodies,
                        const SimulationParameters& params);
 void update_simulation(std::vector<CelestialBody>& bodies, Quadtree& qtree,
                        const SimulationParameters& params);
+
+bool isStateLoaded();
+void markStateAsLoaded();
+void initializeSimulation();
+
+#ifdef __EMSCRIPTEN__
+emscripten::val getBodies();
+void setBodies(const emscripten::val& bodies_val);
+#endif
 
 #endif  // SIMULATION_H
