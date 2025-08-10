@@ -1,5 +1,7 @@
 # Solar System Simulation
 
+![Screenshot](screenshot.png)
+
 [![Run Simulation](https://img.shields.io/badge/Run-Simulation-brightgreen)](https://iliagrigorevdev.github.io/solar-sim/)
 
 This project is a real-time, interactive 2D simulation of a planetary system, built with C++ and rendered in the browser using WebGL. The simulation is compiled to WebAssembly, allowing for near-native performance in a web environment.
