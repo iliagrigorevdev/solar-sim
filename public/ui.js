@@ -348,14 +348,43 @@ resetBtn.addEventListener('click', resetSettings);
 shareBtn.addEventListener('click', () => {
   if (!wasmReady) return;
 
+  const MAX_URL_LENGTH = 2000;
+  const baseUrl = `${window.location.origin}${window.location.pathname}`;
+  const MAX_BASE64_LENGTH =
+    MAX_URL_LENGTH - (baseUrl.length + '?simulation='.length);
+  const MAX_BINARY_SIZE = Math.floor((MAX_BASE64_LENGTH * 3) / 4);
+
+  const parameters = Module.getSimulationParameters();
+  let bodies = Module.getBodies();
+  const colors = colorStops;
+
+  const paramSize = simulationParameterKeys.length * 4;
+  const colorsSize = 4 + colors.length * 7;
+  const fixedSize = paramSize + 4 /* num_bodies */ + colorsSize;
+
+  const maxBodies = Math.floor((MAX_BINARY_SIZE - fixedSize) / 28);
+
+  if (bodies.length > maxBodies) {
+    alert(
+      `Warning: The simulation contains too many bodies to share in a URL. Only the ${maxBodies} bodies closest to the center will be included in the sharable link.`
+    );
+
+    bodies.sort((a, b) => {
+      const distA = Math.sqrt(a.x * a.x + a.y * a.y);
+      const distB = Math.sqrt(b.x * b.x + b.y * b.y);
+      return distA - distB;
+    });
+
+    bodies = bodies.slice(0, maxBodies);
+  }
+
   const simulationData = {
-    parameters: Module.getSimulationParameters(),
-    bodies: Module.getBodies(),
-    colors: colorStops,
+    parameters: parameters,
+    bodies: bodies,
+    colors: colors,
   };
 
   const encodedData = encodeSimulationData(simulationData);
-  const baseUrl = `${window.location.origin}${window.location.pathname}`;
   const url = `${baseUrl}?simulation=${encodedData}`;
 
   navigator.clipboard.writeText(url).then(
