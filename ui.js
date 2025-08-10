@@ -1,4 +1,142 @@
 const fullscreenBtn = document.getElementById('fullscreen-btn');
+
+function encodeSimulationData(data) {
+  let buffer = new ArrayBuffer(1024); // Start with a 1KB buffer
+  let view = new DataView(buffer);
+  let offset = 0;
+
+  function ensureCapacity(needed) {
+    if (buffer.byteLength < offset + needed) {
+      const newBuffer = new ArrayBuffer(buffer.byteLength * 2);
+      new Uint8Array(newBuffer).set(new Uint8Array(buffer));
+      buffer = newBuffer;
+      view = new DataView(buffer);
+    }
+  }
+
+  // Encode parameters
+  for (const key of simulationParameterKeys) {
+    ensureCapacity(4);
+    view.setFloat32(offset, data.parameters[key], true);
+    offset += 4;
+  }
+
+  // Encode bodies
+  ensureCapacity(4);
+  view.setUint32(offset, data.bodies.length, true);
+  offset += 4;
+  for (const body of data.bodies) {
+    ensureCapacity(28); // 6 floats + 1 int per body
+    view.setFloat32(offset, body.x, true);
+    offset += 4;
+    view.setFloat32(offset, body.y, true);
+    offset += 4;
+    view.setFloat32(offset, body.vx, true);
+    offset += 4;
+    view.setFloat32(offset, body.vy, true);
+    offset += 4;
+    view.setFloat32(offset, body.mass, true);
+    offset += 4;
+    view.setInt32(offset, body.id, true);
+    offset += 4;
+    view.setFloat32(offset, body.radius, true);
+    offset += 4;
+  }
+
+  // Encode colors
+  ensureCapacity(4);
+  view.setUint32(offset, data.colors.length, true);
+  offset += 4;
+  for (const color of data.colors) {
+    ensureCapacity(7); // 3 bytes for color, 4 for weight
+    const r = parseInt(color.color.slice(1, 3), 16);
+    const g = parseInt(color.color.slice(3, 5), 16);
+    const b = parseInt(color.color.slice(5, 7), 16);
+    view.setUint8(offset, r);
+    offset += 1;
+    view.setUint8(offset, g);
+    offset += 1;
+    view.setUint8(offset, b);
+    offset += 1;
+    view.setFloat32(offset, color.weight, true);
+    offset += 4;
+  }
+
+  // Convert to base64
+  const binary = new Uint8Array(buffer, 0, offset);
+  const binaryString = Array.from(binary)
+    .map((byte) => String.fromCharCode(byte))
+    .join('');
+  const base64 = btoa(binaryString);
+  return base64.replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
+}
+
+function decodeSimulationData(encodedData) {
+  let base64 = encodedData.replace(/-/g, '+').replace(/_/g, '/');
+  while (base64.length % 4) {
+    base64 += '=';
+  }
+  const binaryString = atob(base64);
+  const buffer = new ArrayBuffer(binaryString.length);
+  const view = new DataView(buffer);
+  for (let i = 0; i < binaryString.length; i++) {
+    view.setUint8(i, binaryString.charCodeAt(i));
+  }
+
+  let offset = 0;
+  const data = {
+    parameters: {},
+    bodies: [],
+    colors: [],
+  };
+
+  // Decode parameters
+  for (const key of simulationParameterKeys) {
+    data.parameters[key] = view.getFloat32(offset, true);
+    offset += 4;
+  }
+
+  // Decode bodies
+  const numBodies = view.getUint32(offset, true);
+  offset += 4;
+  for (let i = 0; i < numBodies; i++) {
+    const body = {};
+    body.x = view.getFloat32(offset, true);
+    offset += 4;
+    body.y = view.getFloat32(offset, true);
+    offset += 4;
+    body.vx = view.getFloat32(offset, true);
+    offset += 4;
+    body.vy = view.getFloat32(offset, true);
+    offset += 4;
+    body.mass = view.getFloat32(offset, true);
+    offset += 4;
+    body.id = view.getInt32(offset, true);
+    offset += 4;
+    body.radius = view.getFloat32(offset, true);
+    offset += 4;
+    data.bodies.push(body);
+  }
+
+  // Decode colors
+  const numColors = view.getUint32(offset, true);
+  offset += 4;
+  for (let i = 0; i < numColors; i++) {
+    const color = {};
+    const r = view.getUint8(offset);
+    offset += 1;
+    const g = view.getUint8(offset);
+    offset += 1;
+    const b = view.getUint8(offset);
+    offset += 1;
+    color.color = `#${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}`;
+    color.weight = view.getFloat32(offset, true);
+    offset += 4;
+    data.colors.push(color);
+  }
+
+  return data;
+}
 const settingsBtn = document.getElementById('settings-btn');
 const shareBtn = document.getElementById('share-btn');
 const settingsPanel = document.getElementById('settings-panel');
@@ -216,8 +354,7 @@ shareBtn.addEventListener('click', () => {
     colors: colorStops,
   };
 
-  const serializedData = JSON.stringify(simulationData);
-  const encodedData = btoa(serializedData);
+  const encodedData = encodeSimulationData(simulationData);
   const baseUrl = `${window.location.origin}${window.location.pathname}`;
   const url = `${baseUrl}?simulation=${encodedData}`;
 
@@ -284,8 +421,7 @@ var Module = {
 
     if (simulationData) {
       try {
-        const decodedData = atob(simulationData);
-        const parsedData = JSON.parse(decodedData);
+        const parsedData = decodeSimulationData(simulationData);
 
         if (parsedData.parameters) {
           Module.setSimulationParameters(parsedData.parameters);
