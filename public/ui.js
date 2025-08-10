@@ -366,14 +366,10 @@ shareBtn.addEventListener('click', () => {
 
   if (bodies.length > maxBodies) {
     alert(
-      `Warning: The simulation contains too many bodies to share in a URL. Only the ${maxBodies} bodies closest to the center will be included in the sharable link.`
+      `Warning: The simulation contains too many bodies to share in a URL. Only the ${maxBodies} largest bodies will be included in the sharable link.`
     );
 
-    bodies.sort((a, b) => {
-      const distA = Math.sqrt(a.x * a.x + a.y * a.y);
-      const distB = Math.sqrt(b.x * b.x + b.y * b.y);
-      return distA - distB;
-    });
+    bodies.sort((a, b) => b.mass - a.mass);
 
     bodies = bodies.slice(0, maxBodies);
   }
