@@ -1,6 +1,6 @@
 # Solar System Simulation
 
-![Screenshot](screenshot.png)
+![Screenshot](public/screenshot.png)
 
 [![Run Simulation](https://img.shields.io/badge/Run-Simulation-brightgreen)](https://iliagrigorevdev.github.io/solar-sim/)
 
